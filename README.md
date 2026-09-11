@@ -1,8 +1,10 @@
-# LearnReact — Real-World React by Porting a Production Vue2 App
+# LearnReact — Real-World React by Porting a Vue2 App
 
 I'm a 15+ year .NET backend developer with a solid Vue2 + Vuex frontend who wants to become fluent in **real-world React** (hello-world tutorials won't do). React is the dominant frontend framework in the Australian job market, and I want to pass React interviews and write credible React on the job.
 
-So instead of following a generic course, this repo teaches React the direct way: **porting slices of my own large production Vue2 SPA into idiomatic React**, using mock data and the modern **Vite + TypeScript** toolchain.
+So instead of following a generic course, this repo teaches React the direct way: **porting slices of a large Vue2 SPA into idiomatic React**, using mock data and the modern **Vite** toolchain. Currently it is using just pure JavaScript to get used to the syntax and concept/thinking adjustments for moving from Vue to React, but I'm planning to incorporate moving into TypeScript in future Lessons.
+
+**What this isn't** - this isn't a total beginner's course for either Vue or React. There is a assumed level of Vue and general javascript framework knowledge expected in order to start at lesson 1. If you want this sort of training, there is a wealth of other places to start. Not saying this couldn't help other people but I built it for me so it's tuned very much to how I work/think :)
 
 _**Important** - the demo react project in here, even though it does run, it is not meant to be a "proper" working application. It is just a collection of concepts, practice code and exercises. It is very loosely structured into a app-like structure but that is me playing around with folders and having the components referencing each other._
 
@@ -12,7 +14,7 @@ I have used a combination of AI to generate this "course" and worked through cha
 
 | Directory | Purpose |
 |---|---|
-| `lessons/` | Self-contained HTML lessons — one tightly-scoped skill each, grounded in a real file from a large production Vue2 SPA translated into React. Each ends with a retrieval-practice quiz and a "do it in the real workspace" exercise. |
+| `lessons/` | Self-contained HTML lessons — one tightly-scoped skill each, grounded in a real Vue code translated into React. Each ends with a retrieval-practice quiz and a "do it in the real workspace" exercise. |
 | `reference/` | One-page cheat sheets compressing each lesson (Vue → React term maps, mental models, gotchas) for quick lookup. |
 | `learning-records/` | Notes capturing what's been learned and the current skill level (zone of proximal development) to drive what to teach next. |
 | `assets/` | Reusable teaching components: shared stylesheet (`lesson.css`) and the quiz widget (`quiz.js`). |
@@ -26,6 +28,7 @@ I have used a combination of AI to generate this "course" and worked through cha
 - **Every lesson is grounded in a real file** from the source Vue2 codebase (`src/views/Home.vue`, `src/components/myTraining/pagination.vue`, `src/components/form/inputText.vue`, ...) and translates it into the idiomatic React equivalent. No toy examples.
 - **The port is real, the data is mocked** — no dependency on the source app's backend, so progress is never blocked by auth or API availability.
 - **Retrieval practice over re-reading** — each lesson ends with a quiz; answers are session-tracked and can be copied back to the teacher agent for your learning records.
+- **Primary sources** - there is further reading suggested to deepen knowledge, with further challenges and exercises (these are not tracked by these lessons though).
 
 ## Progress
 
