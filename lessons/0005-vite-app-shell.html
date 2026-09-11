@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0005 &middot; The Vite app shell</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 05</strong> &middot; App Shell &amp; Routing &middot; <a href="../reference/0005-vue-shell-and-routing.html">Reference</a> &middot; <a href="../lessons/0004-controlled-inputs.html">Lesson 04</a> &middot; <a href="0006-state-management.html">Next</a>
+</div>
+
+<h1>The Vite app shell: from <code>main.js</code> to <code>main.jsx</code></h1>
+<p>This is the lesson that turns the four translations you've learned into a <strong>working app</strong>. You've translated components, effects, props and inputs. Now we stand up the actual shell &mdash; the part of SourceApp that <em>launches</em> the app, draws the header/menu/footer, and swaps views when you navigate. Mission milestone: &ldquo;working Vite React app reimplementing the Home page + app shell.&rdquo; This is where that becomes real. (Note: we&rsquo;re doing this in plain JavaScript first &mdash; TypeScript is a later lesson, once the patterns are comfy.)</p>
+
+<h2>The one idea that unlocks the shell</h2>
+<blockquote>
+Vue keeps mounting, layout and routing as <strong>framework magic</strong>: <code>new Vue({router, store, i18n}).$mount('#app')</code> cooks the app, and <code>&lt;router-view&gt;</code> swaps pages. React has no magic &mdash; you wire the same parts together with <strong>plain components and renders</strong>: <code>createRoot(...).render(&lt;App/&gt;)</code> starts it, a layout component wraps <code>&lt;Outlet/&gt;</code>, and the router just reads a route table. (<a href="https://react.dev/reference/react-dom/client/createRoot">react.dev createRoot</a> &middot; <a href="https://reactrouter.com/start/declarative/routing">react-router declarative routing</a>)
+</blockquote>
+
+<h2>Read the real files</h2>
+<p>Three SourceApp files do all of this today:</p>
+<ul>
+  <li><code>src/main.js</code> + <code>src/appMounter.js</code> &mdash; fetch startup settings, then <code>new Vue({ router, store, i18n, render: h =&gt; h(App) }).$mount('#app')</code>.</li>
+  <li><code>src/frontend.vue</code> &mdash; the shell template: <code>&lt;app-header /&gt;</code>, <code>&lt;router-view /&gt;</code>, <code>&lt;app-footer /&gt;</code>, plus global overlays.</li>
+  <li><code>src/routers/core.js</code> &mdash; the route table: <code>path</code>, <code>name</code>, <code>component: () =&gt; import(...)</code>, and <code>meta.uiMenu</code> (with <code>showInUI</code>, <code>displayOrder</code>, <code>menuIcon</code>) that the header menu renders from.</li>
+</ul>
+<div class="tldr">
+SourceApp&rsquo;s header menu is <strong>not</strong> a hardcoded list &mdash; it&rsquo;s generated from each route&rsquo;s <code>meta.uiMenu</code>. Add a route with <code>showInUI: true</code> and it appears in the menu. Your React port should keep that property: <strong>one route table drives both routing and the menu.</strong>
+</div>
+
+<h2>Translate it: the mount</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; appMounter.js (core)</h4>
+<pre><code>const store = storeModule.createAndExportStore();
+const router = routerModule.default;
+const i18n = i18nModule.default;
+
+const vm = new Vue({
+  router,
+  store,
+  i18n,
+  render: h =&gt; h(App)
+}).$mount('#app');</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; src/main.jsx (full file)</h4>
+<pre><code>import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+createRoot(
+  document.getElementById('root')
+).render(
+  &lt;StrictMode&gt;
+    &lt;App /&gt;
+  &lt;/StrictMode&gt;
+);</code></pre>
+  </div>
+</div>
+
+<p>Two things to notice:</p>
+<ul>
+  <li><strong><code>$mount('#app')</code> &#8594; <code>createRoot(el).render(&lt;App/&gt;)</code></strong>. Vue instantiates; React just renders a component tree into a DOM node. There is no separate &ldquo;app object&rdquo; &mdash; <code>&lt;App/&gt;</code> is a component like any other.</li>
+  <li><strong>Router, store, i18n stop being constructor options.</strong> In React they become components/hooks you place <em>inside</em> the tree (<code>&lt;BrowserRouter&gt;</code>, Provider, hooks). That demotion is the whole React mental model: <em>everything</em> is just components.</li>
+  <li><strong><code>main.jsx</code> not <code>main.js</code>.</strong> The <code>.jsx</code> extension is the Vite convention for files containing JSX — plain <code>.js</code> still works, but modern React projects name it <code>main.jsx</code>.</li>
+</ul>
+
+<h2>Translate it: the shell layout</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; frontend.vue (template)</h4>
+<pre><code>&lt;app-header v-if="header" /&gt;
+&lt;router-view /&gt;
+&lt;app-footer v-if="footer" /&gt;</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; ShellLayout.jsx</h4>
+<pre><code>import { Outlet } from 'react-router';
+import ShellHeader from './ShellHeader';
+import ShellFooter from './ShellFooter';
+
+export function ShellLayout() {
+  return (
+    &lt;&gt;
+      &lt;ShellHeader /&gt;
+      &lt;main id="maincontent"&gt;
+        &lt;Outlet /&gt; {/* matched page here */}
+      &lt;/main&gt;
+      &lt;ShellFooter /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+  </div>
+</div>
+
+<p><code>&lt;router-view /&gt;</code> becomes <code>&lt;Outlet /&gt;</code>. It&rsquo;s the same contract &mdash; &ldquo;render the matched child route here&rdquo; &mdash; but Outlet is an ordinary component you place in ordinary JSX, so the shell layout is just a component.</p>
+
+<h2>Translate it: the route table + menu</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; routers/core.js (one route)</h4>
+<pre><code>{
+  path: '/',
+  name: 'home',
+  component: () =&gt; import('@/views/Home.vue'),
+  meta: {
+    uiMenu: {
+      showInUI: true,
+      displayLocation: 'menu',
+      displayOrder: 1,
+      menuIcon: 'fal fa-home fa-fw'
+    },
+    tkeys: { menuitem: "app.pageTitle.home" }
+  }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; App.jsx</h4>
+<pre><code>import { BrowserRouter, Routes, Route } from 'react-router';
+import { ShellLayout } from './ShellLayout';
+import Home from './views/Home';
+
+export function App() {
+  return (
+    &lt;BrowserRouter&gt;
+      &lt;Routes&gt;
+        &lt;Route element={&lt;ShellLayout /&gt;}&gt;
+          &lt;Route index element={&lt;Home /&gt;} /&gt;
+          &lt;Route path="notification"
+                 element={&lt;Notification /&gt;} /&gt;
+          &lt;Route path="my-training"
+                 element={&lt;MyTraining /&gt;} /&gt;
+        &lt;/Route&gt;
+      &lt;/Routes&gt;
+    &lt;/BrowserRouter&gt;
+  );
+}</code></pre>
+  </div>
+</div>
+
+<p>Spot the pattern:</p>
+<ul>
+  <li><strong>A pathless <code>&lt;Route element={&lt;ShellLayout /&gt;}&gt;</code> wraps the child routes.</strong> That&rsquo;s the React way to get header+footer around a group &mdash; exactly what <code>frontend.vue</code> does with its root template. No <code>&lt;router-view&gt;</code>, just nesting.</li>
+  <li><strong><code>path</code> matches, <code>element</code> renders.</strong> <code>path="notification"</code> maps a URL segment to a component, same as Vue.</li>
+  <li><strong><code>index</code> route = the default child</strong> at <code>/</code> — our Home.</li>
+  <li><strong>No <code>meta.uiMenu</code> yet.</strong> In React, keep the route table as <em>data</em> (see Reference 05) and build both <code>&lt;Routes&gt;</code> and the menu from the same array &mdash; that preserves the &ldquo;menu derives from routes&rdquo; behavior. Mock the i18n keys as plain strings for now.</li>
+</ul>
+
+<h2>Why this matters for your mission</h2>
+<p>This is the &ldquo;app shell&rdquo; half of &ldquo;Home page + app shell&rdquo;. Every SourceApp navigation goes through exactly these three pieces (bootstrap, shell, route table). An interviewer asking &ldquo;walk me through how your app starts&rdquo; is listening for <code>createRoot</code>/<code>StrictMode</code>/<code>BrowserRouter</code> in that order &mdash; it&rsquo;s a stock question, and it&rsquo;s the difference between &ldquo;I&rsquo;ve seen React&rdquo; and &ldquo;I&rsquo;ve <em>booted</em> React&rdquo;.</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"In React, what replaces $mount(\"#app\")?","o":["use the el option","createRoot.render()","an #app directive","a mount keyword"],"a":1,"why":"createRoot(el).render(&lt;App/&gt;) mounts the component tree into the DOM node."},
+  {"q":"What React component replaces router-view?","o":["use the outlet tag","use the view tag","an Outlet element","a Route element"],"a":2,"why":"&lt;Outlet/&gt; renders the matched child route inside your layout component."},
+  {"q":"How does a page join the header menu?","o":["add route meta data","edit the header code","create a menu entry","import then link it"],"a":0,"why":"The menu is derived from route meta (uiMenu) — one table drives routing and menu."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>In <code>demo-react-app</code>, rename/create the entry file to <code>src/main.jsx</code> and update it to the <code>createRoot</code> shape above (Vite&rsquo;s JS template already gives you this shape — check <code>main.jsx</code>).</li>
+  <li>Add <code>react-router</code> (<code>npm i react-router</code>). Create <code>ShellLayout.jsx</code> with <code>ShellHeader</code>, <code>&lt;Outlet /&gt;</code>, <code>ShellFooter</code>.</li>
+  <li>Rewrite <code>App.jsx</code> with <code>BrowserRouter &gt; Routes &gt; [pathless shell &gt; index Home]</code>.</li>
+  <li>Bonus: replace the hardcoded nav in <code>ShellHeader</code> with a <code>menuRoutes</code> array that also feeds <code>&lt;Routes&gt;</code>.</li>
+</ol>
+<p>Struggling to get it running? The <code>createRoot</code>/<code>Outlet</code>/<code>Routes</code> shape is the lesson — wire it in the existing Vite entry file that the template already gives you.</p>
+
+<h2>Primary source to read</h2>
+<p>Two things: (1) the official <a href="https://react.dev/learn/add-react-to-an-existing-project#using-react-with-a-build-tool">React docs on build-tool setup</a> and the <a href="https://react.dev/reference/react-dom/client/createRoot">createRoot reference</a>; (2) the <a href="https://reactrouter.com/start/declarative/routing">react-router tutorial (declarative mode)</a> &mdash; read the section on nested/layout routes, then look for the <code>&lt;Outlet/&gt;</code> examples. React Router is a moving target (v8 is current in 2026; <code>npm i react-router</code>, imports from <code>react-router</code>, not <code>react-router-dom</code>).</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0005-vue-shell-and-routing.html">App shell &amp; routing</a> cheat sheet compresses all of this, including the menu-from-route-meta pattern. Next lesson: <a href="0006-state-management.html">state management</a> &mdash; what replaces Vuex &mdash; when we wire the store into this shell.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If the &ldquo;route table drives the menu&rdquo; idea was new, or you want help converting <code>demo-react-app</code> to use react-router step-by-step, ask me &mdash; I&rsquo;ll walk it against <code>routers/core.js</code> and the actual <code>header.vue</code> while we go.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

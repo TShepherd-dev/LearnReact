@@ -32,12 +32,7 @@ I have used a combination of AI to generate this "course" and worked through cha
 
 ## Progress
 
-Lessons completed so far map a Vue2 developer's known world onto React:
-
-1. **The component model** — Vue SFC → React function component (`data()` → `useState`, `v-if` → `&&`, `@click` → `onClick`).
-2. **State & effects** — `created()`/`mounted()`/`watch`/`beforeDestroy()` → `useEffect` with a dependency array and a returned cleanup function.
-3. **Props flow & lifting state** — `$emit` → callback props; shared state lives in the closest common parent.
-4. **Controlled inputs** — `v-model` → `value` + `onChange` (and immutable state updates).
+All lessons completed so far, each with a retrieval quiz scored 3/3, plus the ongoing learning records, live in the [`learning-records/`](learning-records/) folder. The lessons themselves are in [`lessons/`](lessons/).
 
 The `demo-react-app` already contains a working app shell (`AppShell`, `ShellHeader`, `ShellFooter`) with translated views/components (`Home`, `MyTraining`, `Pagination`, `MembersAddUser`, `TeamGreeting`).
 

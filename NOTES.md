@@ -11,7 +11,7 @@
 ## Teaching approach (agreed)
 - **Real port, mock data**: actually build a React app reimplementing an SourceApp slice, using mock data rather than the live backend.
 - **First slice**: Home page + app shell (menu, layout, store wiring).
-- **Toolchain**: Vite + TypeScript.
+- **Toolchain**: Vite + **JavaScript** initially; TypeScript introduced at an appropriate future lesson (once core React patterns + port are solid). See learning record 0006.
 - Port slice-by-slice from the Vue codebase; never "Hello World" tutorials.
 - Teaching is grounded in translating real Vue2 files in the SourceApp repo into idiomatic React.
 
@@ -25,7 +25,8 @@
 - **Visual polish matters to Tim** (raised after lesson 0001: "the visual style could use some work but the content is fine"). Content correctness is not enough — the lesson/reference documents should look genuinely good. Treat the shared stylesheet as a first-class deliverable.
 - **Settled lesson style (approved "stay with that"):** modern web-font look — Inter (body/headings) + JetBrains Mono (code) + Lora (blockquotes) loaded from Google Fonts with system fallbacks; white content card on a soft gradient page background; React cyan (#0ea5c9) vs Vue green (#1f9d63) accents; dark code blocks; code wraps (white-space: pre-wrap) to avoid horizontal scrollbars; layout is fluid and grows with the browser window. All in `assets/lesson.css`. Use `.body` wrapper div in every lesson/reference.
 - Keep lessons short, one tangible win each, grounded in a real SourceApp file.
-- Lessons so far: 0001 = SFC → function component (Home.vue); 0002 = lifecycle → useEffect (MyTraining.vue, quiz 3/3); 0003 = props flow / lifting state (pagination.vue → assignment.vue, quiz 3/3). Planned sequence: 0004 = controlled inputs (v-model → value+onChange), then Vite+TS app shell scaffold.
+- Lessons so far: 0001 = SFC → function component (Home.vue); 0002 = lifecycle → useEffect (MyTraining.vue, quiz 3/3); 0003 = props flow / lifting state (pagination.vue → assignment.vue, quiz 3/3); 0004 = controlled inputs (inputText.vue → membersAddUserModal.vue, quiz 3/3); 0005 = app shell (main.js+appMounter+frontend.vue+routers/core.js → createRoot+ShellLayout+Routes). Planned: 0006 = state management (what replaces Vuex, wiring store into shell), then mock-data Home with real layout.
+- Lesson 0005 (app shell) teaches: createRoot(el).render vs new Vue().$mount; router/store/i18n demoted from constructor options to components/hooks inside the tree; `<router-view>` → `<Outlet/>`; pathless `<Route element={<ShellLayout/>}>` wrapping child routes = frontend.vue shell; menu derived from route meta (uiMenu) — one route table drives both routing and menu; React Router v8 (2026): npm i react-router, imports from react-router not react-router-dom. JS-first: main.jsx (TS deferred to a future lesson; demo-react-app stays JSX and just gains react-router).
 - **Quiz results flow (implemented lesson 0002):** static file pages can't push data back to the agent, so `assets/quiz.js` (1) stores answers in `sessionStorage` per page so revisits within a session restore your picks, (2) shows a "Copy my results" summary bar when a page's quiz is fully answered, and (3) intercepts internal `.html` links with an uncopied-completed-quiz reminder dialog ("copy & move on" / "move on without saving" / "stay"). The pasted text is the format I record in learning records. Clipboard uses `navigator.clipboard` on secure contexts, `document.execCommand` fallback on `file://`.
 - Every claim needs a citation back to a high-trust resource in RESOURCES.md.
 - Build toward durable (storage-strength) learning: retrieval practice, desirable difficulty.

@@ -6,13 +6,13 @@ React is the dominant frontend framework in the Australian job market, and I wan
 ## Success looks like
 - I can read a real-world React codebase (components, hooks, state, router, data-fetching) and explain what each part does.
 - I can translate a known Vue2 pattern (SFC, computed, watchers, Vuex, vue-router, i18n) into its idiomatic React equivalent without looking it up.
-- I have a working Vite + TypeScript React app that reimplements the SourceApp Home page + app shell with mock data.
+- I have a working Vite React app that reimplements the SourceApp Home page + app shell with mock data.
 - I'm comfortable enough to discuss React architecture and tradeoffs in an Australian employer's interview.
 
 ## Constraints
 - Learn by real coding on a real Vue codebase (SourceApp at `C:\Work\<private>\SOURCE-UI`), translated into React in this workspace.
 - Initial build feeds on **mock data**, not the live SourceApp backend (so we're not blocked on backend availability/auth).
-- Toolchain: **Vite + TypeScript**.
+- Toolchain: **Vite**, initially with **JavaScript** only. TypeScript will be introduced at an appropriate future lesson, once the core React patterns and the port itself are in a good place — not up front.
 - Start with Home page + app shell as the first slice; expand from there.
 
 ## Out of scope
