@@ -12,7 +12,7 @@ Quiz results block pasted with 3/3 correct across all four lifecycle-shaped hook
 ## Implications
 Tim holds the hardest conceptual leap in React — that there is no lifecycle, only effects that sync against a dep array, and that setup/teardown live in one coupled block. The cleanup-function answer (Q2) is the single most important React interview answer and he has it cold.
 
-Next lesson can move from "read a lifecycle into effects" to actually composing state between components: **Lesson 0003 — props flow and lifting state** (`$emit` → callback props, parent holds state and passes value + setter down), still against real SourceApp files. After that the Vite+TS app shell scaffold.
+Next lesson can move from "read a lifecycle into effects" to actually composing state between components: **Lesson 0003 — props flow and lifting state** (`$emit` → callback props, parent holds state and passes value + setter down), still against real source files. After that the Vite+TS app shell scaffold.
 
 ## Status
 Lesson 0002 delivered, quiz complete 3/3, learning recorded. No remediation.

@@ -13,14 +13,14 @@
 </div>
 
 <h1>State &amp; effects: what replaces <code>created()</code> and <code>mounted()</code></h1>
-<p>Lesson 01 gave you the component shape. Now the <strong>second</strong> most common thing you'll translate when porting SourceApp: <em>when does code run?</em> Vue answers with named lifecycle hooks. React answers with <strong>one</strong> idea — <code>useEffect</code>. By the end of this lesson you'll be able to take any SourceApp view with <code>created()</code>/<code>mounted()</code>/<code>beforeDestroy()</code> and translate it to a single React effect plus its cleanup, from memory.</p>
+<p>Lesson 01 gave you the component shape. Now the <strong>second</strong> most common thing you'll translate when porting the source app: <em>when does code run?</em> Vue answers with named lifecycle hooks. React answers with <strong>one</strong> idea — <code>useEffect</code>. By the end of this lesson you'll be able to take any source-app view with <code>created()</code>/<code>mounted()</code>/<code>beforeDestroy()</code> and translate it to a single React effect plus its cleanup, from memory.</p>
 
 <h2>First, the mental-model shock</h2>
 <blockquote>
 Vue splits <em>when code runs</em> into named hooks: <code>created</code>, <code>mounted</code>, <code>updated</code>, <code>beforeDestroy</code>. React has <strong>no lifecycle</strong> — your component function just runs on every render. When you want to sync with something <em>outside</em> the component (an API, a timer, a route), you use <code>useEffect</code>, and you tell it <em>what changed</em> with a dependency array. (<a href="https://react.dev/learn/lifecycle-of-reactive-effects">react.dev &middot; Lifecycle of Reactive Effects</a>)
 </blockquote>
 
-<p>That sounds abstract. Let's make it concrete with a real SourceApp file — <code>src/views/MyTraining.vue</code> — which uses <em>every</em> lifecycle shape at once.</p>
+<p>That sounds abstract. Let's make it concrete with a real source file — <code>src/views/MyTraining.vue</code> — which uses <em>every</em> lifecycle shape at once.</p>
 
 <h2>Read the real file</h2>
 <p>Open <code>src/views/MyTraining.vue</code>. Its script block has four of the five named hooks:</p>
@@ -106,7 +106,7 @@ beforeDestroy() {
 <p>Same idea, new vocabulary: <strong><code>watch</code> = effect with the watched value in the deps array</strong>.</p>
 
 <h2>Why this matters for your mission</h2>
-<p>Every interactive SourceApp screen touches state and timing — a <code>created()</code> that hydrates from route, a <code>mounted()</code> that subscribes, a <code>beforeDestroy()</code> that cleans up. In your port, <strong>every one of those files collapses into <code>useEffect</code></strong> + cleanup. Interviewers will probe exactly this: &ldquo;how do you make sure a subscription is cleaned up?&rdquo; The answer &mdash; &ldquo;the effect returns the cleanup&rdquo; &mdash; is the single most important React answer to know cold.</p>
+<p>Every interactive source-app screen touches state and timing — a <code>created()</code> that hydrates from route, a <code>mounted()</code> that subscribes, a <code>beforeDestroy()</code> that cleans up. In your port, <strong>every one of those files collapses into <code>useEffect</code></strong> + cleanup. Interviewers will probe exactly this: &ldquo;how do you make sure a subscription is cleaned up?&rdquo; The answer &mdash; &ldquo;the effect returns the cleanup&rdquo; &mdash; is the single most important React answer to know cold.</p>
 
 <h2>Practice — retrieve, don't peek</h2>
 <p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>

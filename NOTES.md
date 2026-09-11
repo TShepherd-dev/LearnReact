@@ -2,21 +2,22 @@
 
 ## Career/prior knowledge
 - 15+ years .NET backend developer (real-world, strong).
-- Frontend: Vue2 + Vuex + vue-router + vue-i18n on a large production SPA (SourceApp). Comfortable with SPA concepts, state management, routing, components, i18n.
+- Frontend: Vue2 + Vuex + vue-router + vue-i18n on a large production SPA (an internal app). Comfortable with SPA concepts, state management, routing, components, i18n.
 - NOT experienced with React.
 
 ## Mission
 - Goal: learn real-world ReactJS. Both (a) employability in the Australian market (interviews + credible on-job React) and (b) a genuine chance it ships internally.
 
 ## Teaching approach (agreed)
-- **Real port, mock data**: actually build a React app reimplementing an SourceApp slice, using mock data rather than the live backend.
+- **Real port, mock data**: actually build a React app reimplementing a slice of the source app, using mock data rather than the live backend.
 - **First slice**: Home page + app shell (menu, layout, store wiring).
 - **Toolchain**: Vite + **JavaScript** initially; TypeScript introduced at an appropriate future lesson (once core React patterns + port are solid). See learning record 0006.
+- **TypeScript lesson plan (pinned but fluid, agreed after lesson 0005):** TS enters as a dedicated **JSX→TSX migration lesson of the whole working demo app**, planned around **lesson 0007** — right after the state-management/store lesson (0006). Rationale: C# background means TS types aren't new concepts, only new tooling (tsconfig, .tsx, @types, Vite plugin), which is easiest after React patterns are automatic; keeping TS out of 0006 avoids two new big things at once; the payoff needs a real codebase (compile errors like "Pagination expects onPage: (page:number)=>void" only feel worth it once real prop shapes flow). **This timing is fluid** — it may land later, not 0007. Readiness trigger: when the JS app makes Tim wish the editor caught typo'd prop names / confirmed data shapes. If he feels it during 0006, move the TS lesson up.
 - Port slice-by-slice from the Vue codebase; never "Hello World" tutorials.
-- Teaching is grounded in translating real Vue2 files in the SourceApp repo into idiomatic React.
+- Teaching is grounded in translating real Vue2 files in the source Vue2 repo into idiomatic React.
 
 ## Source Vue codebase
-- Path: `C:\Work\<private>\SOURCE-UI`
+- Path: private source Vue2 codebase, kept out of this public repo (see MISSION.md constraint)
 - Entry: `src/main.js`, `src/appMounter.js`, `src/router.js` -> `src/routers/core.js`, `src/store/index.js` (39 Vuex modules), `src/views/*.vue`, `src/components/*`.
 - Uses Vue 2.7, Vuex 3, vue-router 3, vue-i18n 8, axios, Vite. `$t()` for i18n, rich route `meta` (permissions, breadcrumbs, uiMenu, tkeys).
 
@@ -24,7 +25,8 @@
 - Tim is a senior engineer — assume deep SPA/state/routing knowledge; teach React's *differences* and idioms, not web fundamentals.
 - **Visual polish matters to Tim** (raised after lesson 0001: "the visual style could use some work but the content is fine"). Content correctness is not enough — the lesson/reference documents should look genuinely good. Treat the shared stylesheet as a first-class deliverable.
 - **Settled lesson style (approved "stay with that"):** modern web-font look — Inter (body/headings) + JetBrains Mono (code) + Lora (blockquotes) loaded from Google Fonts with system fallbacks; white content card on a soft gradient page background; React cyan (#0ea5c9) vs Vue green (#1f9d63) accents; dark code blocks; code wraps (white-space: pre-wrap) to avoid horizontal scrollbars; layout is fluid and grows with the browser window. All in `assets/lesson.css`. Use `.body` wrapper div in every lesson/reference.
-- Keep lessons short, one tangible win each, grounded in a real SourceApp file.
+- **Public-repo scrub policy**: this repo is pushed PUBLIC to GitHub. The real product name, all product-prefixed internal identifiers, and the source codebase's filesystem path are scrubbed from ALL committed files (lessons, references, learning-records, MISSION.md, NOTES.md, RESOURCES.md, README, demo app, assets). Lessons refer to the private source app generically as "the source app" with neutral file names (e.g. `inputText.vue`, `app-header`, `app-pagination`). If a lesson needs a real source file, translate its name to a neutral generic before publishing. NOTE: git HISTORY prior to the scrub commit still contains the old names (initial commits were pushed) — if this matters, history rewrite + force-push is required (not yet done).
+- Keep lessons short, one tangible win each, grounded in a real source file.
 - Lessons so far: 0001 = SFC → function component (Home.vue); 0002 = lifecycle → useEffect (MyTraining.vue, quiz 3/3); 0003 = props flow / lifting state (pagination.vue → assignment.vue, quiz 3/3); 0004 = controlled inputs (inputText.vue → membersAddUserModal.vue, quiz 3/3); 0005 = app shell (main.js+appMounter+frontend.vue+routers/core.js → createRoot+ShellLayout+Routes). Planned: 0006 = state management (what replaces Vuex, wiring store into shell), then mock-data Home with real layout.
 - Lesson 0005 (app shell) teaches: createRoot(el).render vs new Vue().$mount; router/store/i18n demoted from constructor options to components/hooks inside the tree; `<router-view>` → `<Outlet/>`; pathless `<Route element={<ShellLayout/>}>` wrapping child routes = frontend.vue shell; menu derived from route meta (uiMenu) — one route table drives both routing and menu; React Router v8 (2026): npm i react-router, imports from react-router not react-router-dom. JS-first: main.jsx (TS deferred to a future lesson; demo-react-app stays JSX and just gains react-router).
 - **Quiz results flow (implemented lesson 0002):** static file pages can't push data back to the agent, so `assets/quiz.js` (1) stores answers in `sessionStorage` per page so revisits within a session restore your picks, (2) shows a "Copy my results" summary bar when a page's quiz is fully answered, and (3) intercepts internal `.html` links with an uncopied-completed-quiz reminder dialog ("copy & move on" / "move on without saving" / "stay"). The pasted text is the format I record in learning records. Clipboard uses `navigator.clipboard` on secure contexts, `document.execCommand` fallback on `file://`.

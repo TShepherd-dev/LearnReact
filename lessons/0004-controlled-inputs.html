@@ -23,13 +23,13 @@
 <p>Notice the shape &mdash; <em>value down, callback up</em>. That&rsquo;s exactly Lesson 03. Forms are not a new mechanism; they&rsquo;re the same props handshake, applied to an <code>&lt;input&gt;</code>.</p>
 
 <h2>Read the real file</h2>
-<p>Open <code>src/components/form/inputText.vue</code> and <code>src/components/myTeam/membersAddUserModal.vue</code>. The first is SourceApp&rsquo;s shared text field; the second is a modal form that uses it. This codebase does <em>not</em> use <code>v-model</code> on its inputs &mdash; it builds the handshake by hand:</p>
+<p>Open <code>src/components/form/inputText.vue</code> and <code>src/components/myTeam/membersAddUserModal.vue</code>. The first is the source app&rsquo;s shared text field; the second is a modal form that uses it. This codebase does <em>not</em> use <code>v-model</code> on its inputs &mdash; it builds the handshake by hand:</p>
 <ul>
   <li><code>inputText.vue</code> exposes an <code>inputValue</code> <em>prop</em> and emits <code>input-change</code> with the new value.</li>
   <li><code>membersAddUserModal.vue</code> passes <code>:inputValue="form.firstName || ''"</code> down and listens for <code>@input-change</code> to write back.</li>
 </ul>
 <div class="tldr">
-Vue gives you <code>v-model</code> as a convenience on top of exactly this pattern. SourceApp chose to write the pattern out. React only has the pattern &mdash; so porting this file is <em>almost literal</em>.
+Vue gives you <code>v-model</code> as a convenience on top of exactly this pattern. This codebase chose to write the pattern out. React only has the pattern &mdash; so porting this file is <em>almost literal</em>.
 </div>
 
 <h2>Translate it</h2>
@@ -67,12 +67,12 @@ Vue gives you <code>v-model</code> as a convenience on top of exactly this patte
   </div>
 </div>
 
-<p><code>inputValue</code> became <code>value</code>; <code>@input-change</code> became <code>onChange</code>; <code>$event.target.value</code> became <code>e.target.value</code>. That&rsquo;s the whole lesson &mdash; <strong>React&rsquo;s plain <code>&lt;input&gt;</code> is SourceApp&rsquo;s <code>input-text</code></strong>, without the wrapper.</p>
+<p><code>inputValue</code> became <code>value</code>; <code>@input-change</code> became <code>onChange</code>; <code>$event.target.value</code> became <code>e.target.value</code>. That&rsquo;s the whole lesson &mdash; <strong>React&rsquo;s plain <code>&lt;input&gt;</code> is the source app&rsquo;s <code>input-text</code></strong>, without the wrapper.</p>
 
 <p>One detail to notice, because it trips people: <code>setForm({ ...form, firstName: e.target.value })</code> replaces the whole <code>form</code> object with a copy that has one field changed. You do <em>not</em> set <code>form.firstName = val</code> &mdash; mutating state never re-renders. This is the immutable-update rule that replaced Vue&rsquo;s reactive mutations.</p>
 
 <h2>Why this matters for your mission</h2>
-<p>Every admin screen in SourceApp is form-driven &mdash; user details, training plans, banners, system parameters, all backed by <code>input-text</code> / dropdown / checkbox. That&rsquo;s why the codebase has 100+ usages. In a React port every one of those becomes a controlled component. And because the Vue side already does the explicit handshake, your job is XML-level naming: <code>inputValue &#8594; value</code>, <code>input-change &#8594; onChange</code>. You&rsquo;ll look like a pro to an interviewer because you&rsquo;ll say &ldquo;controlled component&rdquo; with the <code>value</code>/<code>onChange</code> shape instantly.</p>
+<p>Every admin screen in the source app is form-driven &mdash; user details, training plans, banners, system parameters, all backed by <code>input-text</code> / dropdown / checkbox. That&rsquo;s why the codebase has 100+ usages. In a React port every one of those becomes a controlled component. And because the Vue side already does the explicit handshake, your job is XML-level naming: <code>inputValue &#8594; value</code>, <code>input-change &#8594; onChange</code>. You&rsquo;ll look like a pro to an interviewer because you&rsquo;ll say &ldquo;controlled component&rdquo; with the <code>value</code>/<code>onChange</code> shape instantly.</p>
 
 <h2>Practice &mdash; retrieve, don&rsquo;t peek</h2>
 <p>Cover the React panel above, then answer. Immediate feedback; one line each.</p>

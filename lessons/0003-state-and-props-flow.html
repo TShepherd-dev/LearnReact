@@ -23,7 +23,7 @@ Data flows <strong>down</strong> as props (read-only values). Changes flow <stro
 <p>In Vue, "the child tells the parent" is an event. In React there is no event system — the parent just gives the child a function and the child reports by calling it.</p>
 
 <h2>Read the real files</h2>
-<p>Open <code>src/components/pagination/pagination.vue</code> and <code>src/components/myTeam/assignment.vue</code> in the SourceApp repo. They're a classic parent/child pair:</p>
+<p>Open <code>src/components/pagination/pagination.vue</code> and <code>src/components/myTeam/assignment.vue</code> in the source Vue2 repo. They're a classic parent/child pair:</p>
 <ul>
   <li><strong>Parent</strong> (assignment.vue) owns the search state and renders <code>&lt;app-pagination&gt;</code>.</li>
   <li><strong>Child</strong> (pagination.vue) receives <code>start</code>, <code>total</code>, <code>pageSize</code> as props and &mdash; when the user clicks next/prev &mdash; says <code>this.$emit('onPage', this.currentPage)</code>.</li>
@@ -112,7 +112,7 @@ return (
 <p>And the one thing that's now <em>explicit</em>: the page number lives in the parent. The routed query string and React state agree, and the child only reports clicks. <strong>State is lifted.</strong></p>
 
 <h2>Why this matters for your mission</h2>
-<p>SourceApp is full of handshake pairs like this — <code>videoPlayer</code> emits <code>videoEnded</code>, <code>liveSearch</code> emits <code>input</code>, <code>memberOptions</code> emits <code>revoke-access</code> &amp; friends. Every one of them is a prop callback in React. More importantly, Vue 2's relaxed <code>$emit</code> lets parents and children drift; React forces the question "who owns this value?" into the open. Your port repeats these 15 symbols a hundred times &mdash; make them reflex.</p>
+<p>The source app is full of handshake pairs like this — <code>videoPlayer</code> emits <code>videoEnded</code>, <code>liveSearch</code> emits <code>input</code>, <code>memberOptions</code> emits <code>revoke-access</code> &amp; friends. Every one of them is a prop callback in React. More importantly, Vue 2's relaxed <code>$emit</code> lets parents and children drift; React forces the question "who owns this value?" into the open. Your port repeats these 15 symbols a hundred times &mdash; make them reflex.</p>
 
 <h2>Practice — retrieve, don't peek</h2>
 <p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>

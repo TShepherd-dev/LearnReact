@@ -13,7 +13,7 @@
 </div>
 
 <h1>The Vite app shell: from <code>main.js</code> to <code>main.jsx</code></h1>
-<p>This is the lesson that turns the four translations you've learned into a <strong>working app</strong>. You've translated components, effects, props and inputs. Now we stand up the actual shell &mdash; the part of SourceApp that <em>launches</em> the app, draws the header/menu/footer, and swaps views when you navigate. Mission milestone: &ldquo;working Vite React app reimplementing the Home page + app shell.&rdquo; This is where that becomes real. (Note: we&rsquo;re doing this in plain JavaScript first &mdash; TypeScript is a later lesson, once the patterns are comfy.)</p>
+<p>This is the lesson that turns the four translations you've learned into a <strong>working app</strong>. You've translated components, effects, props and inputs. Now we stand up the actual shell &mdash; the part of the source app that <em>launches</em> the app, draws the header/menu/footer, and swaps views when you navigate. Mission milestone: &ldquo;working Vite React app reimplementing the Home page + app shell.&rdquo; This is where that becomes real. (Note: we&rsquo;re doing this in plain JavaScript first &mdash; TypeScript is a later lesson, once the patterns are comfy.)</p>
 
 <h2>The one idea that unlocks the shell</h2>
 <blockquote>
@@ -21,14 +21,14 @@ Vue keeps mounting, layout and routing as <strong>framework magic</strong>: <cod
 </blockquote>
 
 <h2>Read the real files</h2>
-<p>Three SourceApp files do all of this today:</p>
+<p>Three source files do all of this today:</p>
 <ul>
   <li><code>src/main.js</code> + <code>src/appMounter.js</code> &mdash; fetch startup settings, then <code>new Vue({ router, store, i18n, render: h =&gt; h(App) }).$mount('#app')</code>.</li>
   <li><code>src/frontend.vue</code> &mdash; the shell template: <code>&lt;app-header /&gt;</code>, <code>&lt;router-view /&gt;</code>, <code>&lt;app-footer /&gt;</code>, plus global overlays.</li>
   <li><code>src/routers/core.js</code> &mdash; the route table: <code>path</code>, <code>name</code>, <code>component: () =&gt; import(...)</code>, and <code>meta.uiMenu</code> (with <code>showInUI</code>, <code>displayOrder</code>, <code>menuIcon</code>) that the header menu renders from.</li>
 </ul>
 <div class="tldr">
-SourceApp&rsquo;s header menu is <strong>not</strong> a hardcoded list &mdash; it&rsquo;s generated from each route&rsquo;s <code>meta.uiMenu</code>. Add a route with <code>showInUI: true</code> and it appears in the menu. Your React port should keep that property: <strong>one route table drives both routing and the menu.</strong>
+the source app&rsquo;s header menu is <strong>not</strong> a hardcoded list &mdash; it&rsquo;s generated from each route&rsquo;s <code>meta.uiMenu</code>. Add a route with <code>showInUI: true</code> and it appears in the menu. Your React port should keep that property: <strong>one route table drives both routing and the menu.</strong>
 </div>
 
 <h2>Translate it: the mount</h2>
@@ -152,7 +152,7 @@ export function App() {
 </ul>
 
 <h2>Why this matters for your mission</h2>
-<p>This is the &ldquo;app shell&rdquo; half of &ldquo;Home page + app shell&rdquo;. Every SourceApp navigation goes through exactly these three pieces (bootstrap, shell, route table). An interviewer asking &ldquo;walk me through how your app starts&rdquo; is listening for <code>createRoot</code>/<code>StrictMode</code>/<code>BrowserRouter</code> in that order &mdash; it&rsquo;s a stock question, and it&rsquo;s the difference between &ldquo;I&rsquo;ve seen React&rdquo; and &ldquo;I&rsquo;ve <em>booted</em> React&rdquo;.</p>
+<p>This is the &ldquo;app shell&rdquo; half of &ldquo;Home page + app shell&rdquo;. Every source-app navigation goes through exactly these three pieces (bootstrap, shell, route table). An interviewer asking &ldquo;walk me through how your app starts&rdquo; is listening for <code>createRoot</code>/<code>StrictMode</code>/<code>BrowserRouter</code> in that order &mdash; it&rsquo;s a stock question, and it&rsquo;s the difference between &ldquo;I&rsquo;ve seen React&rdquo; and &ldquo;I&rsquo;ve <em>booted</em> React&rdquo;.</p>
 
 <h2>Practice — retrieve, don't peek</h2>
 <p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>

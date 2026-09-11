@@ -1,6 +1,6 @@
 # ReactJS Resources
 
-Curated, high-trust sources for learning real-world React by translating the SourceApp Vue2 app into a Vite + TypeScript React app. Grouped by Knowledge (what to learn) and Wisdom (who to learn with).
+Curated, high-trust sources for learning real-world React by translating a real Vue2 app into a Vite + TypeScript React app. Grouped by Knowledge (what to learn) and Wisdom (who to learn with).
 
 ## Knowledge
 
@@ -34,4 +34,4 @@ Curated, high-trust sources for learning real-world React by translating the Sou
 - Local: the Australian .NET/developer meetup scene (e.g. Sydney/Melbourne tech meetups) — a good place to discuss Vue/React migration in person. _Note: only pursue if Tim wants in-person/community contact; check preference first._
 
 ## Gaps
-- No single trusted, current (2026) primary source dedicated entirely to **migrating a Vue2+Vuex SPA to React** — the mapping tables available (react-crash-course, VuReact guide) are Vue3-focused and partial. This workspace's slice-by-slice port of SourceApp is filling that gap itself; lessons should record findings as learning records.
+- No single trusted, current (2026) primary source dedicated entirely to **migrating a Vue2+Vuex SPA to React** — the mapping tables available (react-crash-course, VuReact guide) are Vue3-focused and partial. This workspace's slice-by-slice port of the source app is filling that gap itself; lessons should record findings as learning records.

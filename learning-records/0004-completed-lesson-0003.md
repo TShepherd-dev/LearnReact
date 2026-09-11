@@ -12,7 +12,7 @@ Quiz results block pasted with 3/3 correct, immediately (no spacing gap this tim
 ## Implications
 The props-down / callbacks-up mental model has landed. Tim correctly articulated the two hardest parts of this lesson unprompted through the quiz: that events become props (Q1/Q3) and that React forces "who owns this value?" to be answered explicitly via lifting state (Q2).
 
-Three lessons in, the component triad is in place: structure (Lesson 01), behavior/effects (Lesson 02), and communication/ownership (Lesson 03). The natural next step is the last piece of core component behavior — **Lesson 0004: controlled inputs**, what replaces `v-model` (`value` + `onChange`), still grounded in a real SourceApp form component (e.g. `inputText.vue` / `showCompleted.vue`, which emit `input-change`/`update`). After that: scaffold the Vite + TypeScript React app shell.
+Three lessons in, the component triad is in place: structure (Lesson 01), behavior/effects (Lesson 02), and communication/ownership (Lesson 03). The natural next step is the last piece of core component behavior — **Lesson 0004: controlled inputs**, what replaces `v-model` (`value` + `onChange`), still grounded in a real source form component (e.g. `inputText.vue` / `showCompleted.vue`, which emit `input-change`/`update`). After that: scaffold the Vite + TypeScript React app shell.
 
 ## Status
 Lesson 0003 delivered, quiz complete 3/3, learning recorded. No remediation.

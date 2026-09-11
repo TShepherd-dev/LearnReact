@@ -13,7 +13,7 @@
 </div>
 
 <h1>App shell &amp; routing: mounting, layout and the route table</h1>
-<p>How SourceApp&rsquo;s bootstrap (<code>src/main.js</code>, <code>src/appMounter.js</code>), frontend shell (<code>src/frontend.vue</code>) and route table (<code>src/routers/core.js</code>) map onto a Vite React app (plain JavaScript for now — TypeScript is a later lesson). Read <a href="../lessons/0005-vite-app-shell.html">Lesson 0005</a> first; this is a quick-reference.</p>
+<p>How the source app&rsquo;s bootstrap (<code>src/main.js</code>, <code>src/appMounter.js</code>), frontend shell (<code>src/frontend.vue</code>) and route table (<code>src/routers/core.js</code>) map onto a Vite React app (plain JavaScript for now — TypeScript is a later lesson). Read <a href="../lessons/0005-vite-app-shell.html">Lesson 0005</a> first; this is a quick-reference.</p>
 
 <h2>The mental model</h2>
 <blockquote>
@@ -136,7 +136,7 @@ export function App() {
 </table>
 
 <h2>Menu from route meta (the pay-off)</h2>
-<p>SourceApp&rsquo;s header is generated from <code>meta.uiMenu</code> (showInUI/displayOrder/menuIcon), not hardcoded. In React, keep the route table as <em>data</em>; build both <code>&lt;Routes&gt;</code> and the menu from the same array so a new page shows up in the menu for free:</p>
+<p>the source app&rsquo;s header is generated from <code>meta.uiMenu</code> (showInUI/displayOrder/menuIcon), not hardcoded. In React, keep the route table as <em>data</em>; build both <code>&lt;Routes&gt;</code> and the menu from the same array so a new page shows up in the menu for free:</p>
 <pre><code>const menuRoutes = [
   { path: "/", label: "Home", icon: "home", element: Home },
   { path: "/my-training", label: "My training", icon: "book", element: MyTraining }

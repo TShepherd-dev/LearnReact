@@ -13,7 +13,7 @@
 </div>
 
 <h1>Your first React component: from Home.vue</h1>
-<p>We're porting the SourceApp <strong>Home page and app shell</strong> to React. So let's start where the real file starts: <code>src/views/Home.vue</code> in your Vue codebase. By the end of this ten-minute lesson you'll be able to read that SFC and write its React function-component equivalent skeleton from memory.</p>
+<p>We're porting the source app's <strong>Home page and app shell</strong> to React. So let's start where the real file starts: <code>src/views/Home.vue</code> in your Vue codebase. By the end of this ten-minute lesson you'll be able to read that SFC and write its React function-component equivalent skeleton from memory.</p>
 
 <h2>The one idea that unlocks everything</h2>
 <blockquote>
@@ -23,7 +23,7 @@ A React component is just a <strong>JavaScript function that returns JSX</strong
 <p>Compare that to Vue, where a component splits into <code>&lt;template&gt;</code>, <code>&lt;script&gt;</code>, and <code>&lt;style&gt;</code>, and where <em>you rarely write the render function yourself</em>. In React, the markup and the logic are the same thing: one function returning JSX. This is <strong>the</strong> mental-model shift from Vue to React.</p>
 
 <h2>Read the real file</h2>
-<p>Open <code>src/views/Home.vue</code> in the SourceApp repo. Notice its shape:</p>
+<p>Open <code>src/views/Home.vue</code> in the source Vue2 repo. Notice its shape:</p>
 <ul>
   <li><code>&lt;template&gt;</code> — the markup: a banner, widgets (<code>userWelcome</code>, <code>teamWelcome</code>), sliders, and a "what's hot" section with two tab buttons.</li>
   <li><code>&lt;script&gt;</code> — <code>components</code> registers children; <code>data()</code> holds <code>newReleasesIsActive</code>; <code>computed</code>/<code>methods</code> hold logic; <code>created()</code> runs once.</li>
@@ -99,7 +99,7 @@ export function Home() {
 </ul>
 
 <h2>Why this matters for your mission</h2>
-<p>Every screen in SourceApp — all 31 views and dozens of components — follows this same SFC shape. Once this single translation is instinctive, you can read any upstream component, and the "port" of the Home page becomes routine rather than mysterious. It's also the #1 thing an Australian React interviewer will watch you do fluidly.</p>
+<p>Every screen in the source app — all 31 views and dozens of components — follows this same SFC shape. Once this single translation is instinctive, you can read any upstream component, and the "port" of the Home page becomes routine rather than mysterious. It's also the #1 thing an Australian React interviewer will watch you do fluidly.</p>
 
 <h2>Practice — retrieve, don't peek</h2>
 <p>Cover the React panel above, then answer. Immediate feedback; one line each.</p>
@@ -123,7 +123,7 @@ export function Home() {
 <p>The one-page <a href="../reference/0001-vue-sfc-to-react-component.html">Vue SFC &#8594; React Function Component</a> cheat sheet compresses everything here — bookmark it; you'll return to it constantly. Next lesson: <a href="0002-state-and-effects.html">state and effects (the <code>created()</code> replacement)</a>.</p>
 
 <div class="ask">
-  <strong>Ask your teacher anything.</strong> If any mapping above felt off, or you want the fuller <em>Thinking in React</em> walkthrough against a specific component in the codebase, ask me — I work against the actual SourceApp source and can show you the translation for any file.
+  <strong>Ask your teacher anything.</strong> If any mapping above felt off, or you want the fuller <em>Thinking in React</em> walkthrough against a specific component in the codebase, ask me — I work against the actual source code and can show you the translation for any file.
 </div>
 </div>
 
