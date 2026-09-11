@@ -4,6 +4,8 @@ I'm a 15+ year .NET backend developer with a solid Vue2 + Vuex frontend who want
 
 So instead of following a generic course, this repo teaches React the direct way: **porting slices of my own large production Vue2 SPA into idiomatic React**, using mock data and the modern **Vite + TypeScript** toolchain.
 
+I have used a combination of AI to generate this "course" and worked through challenges in the recommended primary sources like https://react.dev/. The AI assistance came through using OpenCode Desktop, with free and paid models through the Opencode Zen platform. I mainly use Opencode as a lost-cost alternative to using more "popular" systems such as Claude or OpenAI, since I'm paying for this myself :)
+
 ## What's in here
 
 | Directory | Purpose |
