@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Vue props &amp; events → React props &amp; lifting state</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 03</strong> &middot; Vue props &amp; events &#8594; React props &amp; lifting state &middot; <a href="../lessons/0003-state-and-props-flow.html">Lesson 0003</a>
+</div>
+
+<h1>Vue Props &amp; Events &#8594; React Props &amp; Lifting State</h1>
+<p>How Vue's props-down / events-up (<code>$emit</code>) data flow maps onto React, and why shared state ends up "lifted" into the parent. Read <a href="../lessons/0003-state-and-props-flow.html">Lesson 0003</a> first; this is a quick reference.</p>
+
+<h2>One mental model: data flows down, callbacks flow up</h2>
+<blockquote>
+Both frameworks agree on the shape: a child learns from its parent via <strong>props</strong> (read-only) and tells its parent about things via <strong>callbacks</strong>. Vue spells the callback as <code>$emit('onPage', page)</code>; React spells it as an <code>onPage</code> prop the parent passes in. (<a href="https://react.dev/learn/passing-props-to-a-component">react.dev &middot; Passing Props</a>)
+</blockquote>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue 2</th><th>React</th><th>Notes</th></tr>
+<tr><td><code>props: { start: Number }</code></td><td>destructure from the function's first argument</td><td>Props are just arguments: <code>function Pagination({ start, total })</code>.</td></tr>
+<tr><td><code>this.start</code></td><td><code>start</code> (the variable)</td><td>No <code>this</code> — props are local variables.</td></tr>
+<tr><td><code>this.$emit('onPage', page)</code></td><td><code>onPage(page)</code> — call the prop</td><td>The "emit" is a function you call. Parent chose its name.</td></tr>
+<tr><td><code>&lt;child :start="x" @onPage="h"/&gt;</code></td><td><code>&lt;Child start={x} onPage={h} /&gt;</code></td><td>Both directions are props. Same JSX syntax.</td></tr>
+<tr><td>parent method <code>onPage(p){ ... }</code></td><td>inline arrow <code>onPage={(p) =&gt; ...}</code> or a function</td><td>You can pass any function, not just method names.</td></tr>
+<tr><td>child mutates a prop</td><td><strong>props are read-only</strong></td><td>To change shared value, call the callback so the parent updates it. Never assign to a prop.</td></tr>
+<tr><td>state shared by two components</td><td><strong>lift it to their closest common parent</strong></td><td>Parent holds <code>useState</code>; passes value+setter (as callbacks) down. Source: <a href="https://react.dev/learn/lifting-state-up">Lifting State Up</a>.</td></tr>
+<tr><td><code>v-model</code> (two-way)</td><td>controlled component: <code>value</code> + <code>onChange</code></td><td>React is strictly one-way. More in a forms lesson.</td></tr>
+</table>
+
+<h2>Skeleton: child emits an event</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; pagination.vue (abridged)</h4>
+<pre><code>props: { start: Number, total: Number, pageSize: Number },
+methods: {
+  next() {
+    if (this.currentPage === this.totalPages) return
+    this.currentPage += 1
+    this.$emit('onPage', this.currentPage)
+  }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Pagination.tsx</h4>
+<pre><code>export function Pagination({
+  start, total, pageSize, onPage
+}) {
+  const next = () =&gt; {
+    if (currentPage === totalPages) return;
+    onPage(currentPage + 1); // "emit" is a call
+  };
+  return ( /* JSX */ );
+}</code></pre>
+  </div>
+</div>
+
+<h2>Skeleton: parent holds the state</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; assignment.vue (abridged)</h4>
+<pre><code>&lt;app-pagination
+  :start="searchOptions.pn"
+  :total="assignableTeamMembersTotal"
+  @onPage="onPage"
+  :pageSize="searchOptions.nr" /&gt;
+
+methods: {
+  onPage(currentPage) {
+    routerUtility.saveScrollPosition()
+    this.searchOptions.pn = currentPage
+    this.$router.push({ query: { pn: currentPage } })
+  }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Assignment.tsx</h4>
+<pre><code>const [pn, setPn] = useState(0);
+
+return (
+  &lt;Pagination
+    start={pn}
+    total={assignableTeamMembersTotal}
+    pageSize={searchOptions.nr}
+    onPage={(currentPage) =&gt; {
+      setPn(currentPage);          // update lifted state
+      navigate(`?pn=${currentPage}`);
+    }}
+  /&gt;
+);</code></pre>
+  </div>
+</div>
+
+<h2>Lifting state, the short rule</h2>
+<blockquote>If two sibling components both need the same value, the value <strong>lives in their closest common parent</strong>. The parent owns it with <code>useState</code>, passes the value down as props, and passes setter-callbacks down so children can request changes. (<a href="https://react.dev/learn/lifting-state-up">react.dev &middot; Lifting State Up</a>)</blockquote>
+
+<h2>Common gotchas</h2>
+<ul>
+  <li><strong>Assigning to a prop</strong>: forbidden. In Vue 2 devmode you get a warning; in React it's silently ignored (and a bug).</li>
+  <li><strong>Forgetting the callback</strong>: if a child needs to change shared state and you didn't pass it a callback, the child can't. That's the design — data flow is explicit.</li>
+  <li><strong>Callback naming</strong>: <code>onX</code> for props, <code>handleX</code> for the handler in the parent is conventional but optional.</li>
+</ul>
+
+</div>
+</body>
+</html>

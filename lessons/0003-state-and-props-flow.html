@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0003 &middot; Props flow &amp; lifting state</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 03</strong> &middot; Props &amp; State Flow &middot; <a href="../reference/0003-vue-props-to-react-props.html">Reference</a> &middot; <a href="../lessons/0002-state-and-effects.html">Lesson 02</a> &middot; <a href="0004-controlled-inputs.html">Next</a>
+</div>
+
+<h1>Props flow &amp; lifting state: what replaces <code>$emit</code></h1>
+<p>Lessons 01 and 02 covered the component's <em>insides</em> — how markup, state, and lifecycle translate. Now the <strong>in-between</strong>: how do components talk to each other? In Vue you have <code>props</code> down and <code>$emit</code> up. React keeps the props-down part and replaces the emit-up part with&hellip; another prop. By the end of this lesson you'll translate any Vue parent/child handshake into React, and know when <em>state must move up into the parent</em>.</p>
+
+<h2>The one idea</h2>
+<blockquote>
+Data flows <strong>down</strong> as props (read-only values). Changes flow <strong>up</strong> as callback props &mdash; the parent passes the child a function, and the child calls it. If two siblings need the same piece of state, that state <strong>lives in their closest common parent</strong>, which hands each child a value and a callback. This is "lifting state up." (<a href="https://react.dev/learn/lifting-state-up">react.dev &middot; Lifting State Up</a>)
+</blockquote>
+
+<p>In Vue, "the child tells the parent" is an event. In React there is no event system — the parent just gives the child a function and the child reports by calling it.</p>
+
+<h2>Read the real files</h2>
+<p>Open <code>src/components/pagination/pagination.vue</code> and <code>src/components/myTeam/assignment.vue</code> in the SourceApp repo. They're a classic parent/child pair:</p>
+<ul>
+  <li><strong>Parent</strong> (assignment.vue) owns the search state and renders <code>&lt;app-pagination&gt;</code>.</li>
+  <li><strong>Child</strong> (pagination.vue) receives <code>start</code>, <code>total</code>, <code>pageSize</code> as props and &mdash; when the user clicks next/prev &mdash; says <code>this.$emit('onPage', this.currentPage)</code>.</li>
+  <li>Parent listens: <code>@onPage="onPage"</code>, and its <code>onPage(currentPage)</code> method saves scroll position and pushes the new page number into the route query.</li>
+</ul>
+<div class="tldr">
+This is <em>literally lifting state</em>: the truth (which page) lives up in the parent (and route), the child is a dumb display control.
+</div>
+
+<h2>Translate it — the child</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; pagination.vue (abridged)</h4>
+<pre><code>props: { start: Number, total: Number, pageSize: Number },
+methods: {
+  next() {
+    if (this.currentPage === this.totalPages) return
+    this.currentPage += 1
+    this.$emit('onPage', this.currentPage)
+  },
+  prev() { ... }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Pagination.tsx</h4>
+<pre><code>export function Pagination({ start, total, pageSize, onPage }) {
+  const next = () =&gt; {
+    if (currentPage === totalPages) return;
+    onPage(currentPage + 1);
+  };
+  /* ... */
+}</code></pre>
+  </div>
+</div>
+
+<p>Two changes happen at once:</p>
+<ul>
+  <li><strong>Props are function arguments.</strong> Vue's <code>props: { start: Number }</code> + <code>this.start</code> becomes destructuring the first parameter: <code>{ start, total, pageSize, onPage }</code>. No <code>this</code>.</li>
+  <li><strong><code>$emit('onPage', page)</code> becomes a call: <code>onPage(page)</code>.</strong> The event name is now a prop the parent named. The child doesn't broadcast &mdash; it calls the function it was handed.</li>
+</ul>
+
+<h2>Translate it — the parent</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; assignment.vue (abridged)</h4>
+<pre><code>&lt;app-pagination
+  v-if="assignableTeamMembersTotal"
+  :start="searchOptions.pn"
+  :total="assignableTeamMembersTotal"
+  @onPage="onPage"
+  :pageSize="searchOptions.nr" /&gt;
+
+methods: {
+  onPage(currentPage) {
+    routerUtility.saveScrollPosition()
+    this.searchOptions.pn = currentPage
+    this.$router.push({ query: { pn: currentPage } })
+  }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Assignment.tsx</h4>
+<pre><code>const [pn, setPn] = useState(0);
+
+return (
+  {assignableTeamMembersTotal &gt; 0 &amp;&amp; (
+    &lt;Pagination
+      start={pn}
+      total={assignableTeamMembersTotal}
+      pageSize={searchOptions.nr}
+      onPage={(currentPage) =&gt; {
+        setPn(currentPage);   // update the lifted state
+        navigate(`?pn=${currentPage}`);
+      }}
+    /&gt;
+  )}
+);</code></pre>
+  </div>
+</div>
+
+<p>Note what stays the same:</p>
+<ul>
+  <li>The grammar is identical: <code>:start="x" @onPage="h"</code> &#8594; <code>start={x} onPage={h}</code>. Both directions are just props.</li>
+  <li><code>v-if</code> from Lesson 01 &mdash; now as <code>{cond &amp;&amp; ...}</code>. You're using the previous translations naturally.</li>
+</ul>
+<p>And the one thing that's now <em>explicit</em>: the page number lives in the parent. The routed query string and React state agree, and the child only reports clicks. <strong>State is lifted.</strong></p>
+
+<h2>Why this matters for your mission</h2>
+<p>SourceApp is full of handshake pairs like this — <code>videoPlayer</code> emits <code>videoEnded</code>, <code>liveSearch</code> emits <code>input</code>, <code>memberOptions</code> emits <code>revoke-access</code> &amp; friends. Every one of them is a prop callback in React. More importantly, Vue 2's relaxed <code>$emit</code> lets parents and children drift; React forces the question "who owns this value?" into the open. Your port repeats these 15 symbols a hundred times &mdash; make them reflex.</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"In React, how does a child tell its parent something happened?","o":["$emit an event","call a prop callback","write to the DOM","use a watcher"],"a":1,"why":"The parent passes an onX function down; the child says what happened by calling it."},
+  {"q":"Two sibling components both need the same value. Where does it live?","o":["in each child","inside a module","their common parent","in the template"],"a":2,"why":"Lift it to the closest common parent, then hand each child a value and a callback."},
+  {"q":"What does Vue $emit(&#39;onPage&#39;, page) become in React?","o":["a prop named onPage","a Vuex mutation","a lifecycle hook","a ref mutation"],"a":0,"why":"The event name becomes a prop the parent passes; the child instead calls onPage(page)."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Open <code>pagination.vue</code> and <code>assignment.vue</code> side by side.</li>
+  <li>Write a <code>Pagination.tsx</code> component in your scratch project: props <code>start</code>, <code>total</code>, <code>pageSize</code>, <code>onPage</code>; render the prev/next buttons; call <code>onPage</code> from your click handlers.</li>
+  <li>Then write a small parent that supplies <code>pn</code> state and an <code>onPage</code> callback that does <code>setPn(p)</code>. Don't worry about the router push yet &mdash; just get the handshake working.</li>
+</ol>
+
+<h2>Primary source to read</h2>
+<p>The official docs on <a href="https://react.dev/learn/passing-props-to-a-component">Passing Props to a Component</a> and <a href="https://react.dev/learn/lifting-state-up">Lifting State Up</a>. The second is short and is the spiritual successor to Vue's "props down, events up" &mdash; worth reading twice. Re-read <a href="https://react.dev/learn/thinking-in-react">Thinking in React</a> too, now that lifting state will click differently.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0003-vue-props-to-react-props.html">Vue props &amp; events &#8594; React props &amp; lifting state</a> cheat sheet compresses this lesson. Next lesson: <a href="0004-controlled-inputs.html">controlled inputs &mdash; what replaces <code>v-model</code></a>.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If "props are read-only" or the exact shape of a lifted-state example feels off, ask me to walk <code>videoPlayer.vue</code> (emits <code>videoEnded</code>, <code>dwellTimeDone</code>) through the same two-panel translation &mdash; it's the messiest real emit pair in the codebase and a great stress test.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

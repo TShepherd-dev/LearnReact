@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Vue lifecycle hooks → React effects</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 02</strong> &middot; Vue lifecycle &#8594; React effects &middot; <a href="../lessons/0002-state-and-effects.html">Lesson 0002</a>
+</div>
+
+<h1>Vue Lifecycle Hooks &#8594; React Effects</h1>
+<p>How Vue 2's lifecycle hooks (<code>created</code>, <code>mounted</code>, <code>beforeDestroy</code>, <code>watch</code>) map onto React's hooks — specifically <code>useEffect</code>. Read <a href="../lessons/0002-state-and-effects.html">Lesson 0002</a> before relying on this; it's a quick reference, not a tutorial.</p>
+
+<h2>The mental model</h2>
+<blockquote>
+Vue gives you <strong>named moments</strong> in a component's life and runs your code for you. React gives you <strong>one function that runs on every render</strong>, plus <code>useEffect</code> for synchronizing with the outside world — you tell React <em>what changed</em>, not <em>when</em>. There is no lifecycle. (<a href="https://react.dev/learn/lifecycle-of-reactive-effects">react.dev &middot; Lifecycle of Reactive Effects</a>)
+</blockquote>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue 2</th><th>React (function component)</th><th>Notes</th></tr>
+<tr><td><code>created()</code></td><td><code>useEffect(fn, [])</code> — or just initialize in <code>useState</code>/during render</td><td>&ldquo;Run once after first render.&rdquo; Often created() work is really derived/init state, so it belongs inline, not in an effect.</td></tr>
+<tr><td><code>mounted()</code></td><td><code>useEffect(fn, [])</code></td><td>Same empty-deps effect. React does not distinguish created vs mounted; <code>useEffect</code> always runs <em>after</em> the DOM is painted.</td></tr>
+<tr><td><code>beforeDestroy()</code> / <code>destroyed()</code></td><td><strong>cleanup function returned from <code>useEffect</code></strong></td><td>Return <code>() =&gt; {...}</code> from the effect. Runs on every cleanup, including unmount.</td></tr>
+<tr><td><code>watch: { "x": fn }</code></td><td><code>useEffect(fn, [x])</code></td><td>Effect depends on <code>x</code>; re-runs (after cleanup) whenever <code>x</code> changes.</td></tr>
+<tr><td><code>updated()</code></td><td>Not needed — the effect with the right deps covers it</td><td>Rarely written in React; effects re-run when deps change, which is most of <code>updated</code>.</td></tr>
+<tr><td>data-initialization needing props/route</td><td>initialize state lazily from props, or read from props during render</td><td>Deriving from props during render replaces much <code>created()</code> work.</td></tr>
+</table>
+
+<h2>UseEffect fundamentals</h2>
+<h3>Run once (created + mounted twin)</h3>
+<pre><code>// Vue: created(){ ... } and mounted(){ ... } both fire once.
+// React:
+useEffect(() =&gt; {
+  // runs after first render (painted DOM)
+  updateRouteHistory(location);
+  setParentTagLoading(true);
+}, []); // &lt;-- empty array = run once
+</code></pre>
+<div class="side">The empty dependency array <code>[]</code> is what makes it run once. TypeScript note: ESLint may want to see the deps; it's legit for run-once setup.</div>
+
+<h3>Cleanup replaces beforeDestroy</h3>
+<pre><code>// Vue: beforeDestroy(){ clearTimeout(this.timer) }
+// React:
+useEffect(() =&gt; {
+  const timer = setTimeout(updateCount, 30000);
+  return () =&gt; clearTimeout(timer); // &lt;-- runs on unmount (and before every re-run)
+}, []);
+</code></pre>
+
+<h3>Re-run when a dependency changes (watch twin)</h3>
+<pre><code>// Vue: watch: { "$route.query"(){ ... } }
+// React:
+useEffect(() =&gt; {
+  setTabFromQuery(searchParams);
+}, [searchParams]); // &lt;-- re-runs after each render where searchParams changed
+</code></pre>
+
+<h2>The cleanup sequence (why it's safe)</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; named moments</h4>
+<pre><code>created()  &rarr; sets up
+mounted()  &rarr; sets up (DOM ready)
+&hellip;component lives&hellip;
+beforeDestroy()
+destroyed() &rarr; tears down
+
+# &ldquo;tear down&rdquo; and
+# &ldquo;set up&rdquo; are separate
+# named blocks, called once.</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; one coupled unit</h4>
+<pre><code>useEffect(()=&gt;{
+  // set up (every run)
+  const t = setInterval(fn, 30000);
+  return () =&gt; {
+    // tear down (before every
+    // re-run AND on unmount)
+    clearInterval(t);
+  };
+}, []); // deps control re-runs</code></pre>
+  </div>
+</div>
+
+<p>When deps change (or the component unmounts), React runs the <em>previous</em> cleanup first, then the new setup. So you can't "leak" a timer: every setup is paired with its teardown.</p>
+
+<h2>Rules that always apply</h2>
+<ul>
+  <li>Effects run <strong>after</strong> render &mdash; never read imperative DOM that doesn't exist yet. Use <code>useLayoutEffect</code> only if a flash matters (rare).</li>
+  <li><strong>Every effect that sets up something (timer, listener, subscription) must return a cleanup.</strong></li>
+  <li>Cleanup runs on <strong>every re-run of the effect</strong>, not just unmount. This is stricter than <code>beforeDestroy</code> and it's a feature: stale dependencies get torn down, not accidentally left live.</li>
+  <li>&ldquo;Run once&rdquo; doesn't mean &ldquo;first render only&rdquo; &mdash; an effect with <code>[]</code> runs after the first <em>committed</em> render once.</li>
+</ul>
+
+<h2>When Vue code has multiple hooks</h2>
+<p>Real SourceApp files mix several hooks. You can put all of it in <strong>one</strong> <code>useEffect</code> when the setup/teardown share a lifecycle, or split into several effects when the concerns are different (e.g. one for the timer, one for route-sync). Splitting is idiomatic React — effects are organized by <em>what they sync</em>, not by <em>when they run</em>.</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0004 &middot; Controlled inputs: what replaces v-model</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 04</strong> &middot; Data Entry &middot; <a href="../reference/0004-vue-v-model-to-react-controlled-inputs.html">Reference</a> &middot; <a href="../lessons/0003-state-and-props-flow.html">Lesson 03</a> &middot; <a href="0005-vite-ts-app-shell.html">Next</a>
+</div>
+
+<h1>Controlled inputs: what replaces <code>v-model</code></h1>
+<p>You already translated structure (Lesson 01), timing (Lesson 02), and parent-child handshakes (Lesson 03). Now the last core piece of component behavior: <strong>forms</strong>. In Vue you type <code>v-model="something"</code> and the framework does both directions for you. React has no such sugar &mdash; and this is where new React devs panic. The good news: <strong>this codebase already writes the React pattern by hand</strong>. You&rsquo;ll see it in 30 seconds.</p>
+
+<h2>The one idea</h2>
+<blockquote>
+<code>v-model</code> is sugar for <code>:value</code> + <code>@input</code>. In React you write that handshake explicitly: <strong>value down as a prop, changes up as a callback</strong>. When an input&rsquo;s text is entirely driven by React state, it&rsquo;s a <em>controlled component</em>. (<a href="https://react.dev/reference/react-dom/components/input">react.dev &middot; &lt;input&gt;</a>)
+</blockquote>
+
+<p>Notice the shape &mdash; <em>value down, callback up</em>. That&rsquo;s exactly Lesson 03. Forms are not a new mechanism; they&rsquo;re the same props handshake, applied to an <code>&lt;input&gt;</code>.</p>
+
+<h2>Read the real file</h2>
+<p>Open <code>src/components/form/inputText.vue</code> and <code>src/components/myTeam/membersAddUserModal.vue</code>. The first is SourceApp&rsquo;s shared text field; the second is a modal form that uses it. This codebase does <em>not</em> use <code>v-model</code> on its inputs &mdash; it builds the handshake by hand:</p>
+<ul>
+  <li><code>inputText.vue</code> exposes an <code>inputValue</code> <em>prop</em> and emits <code>input-change</code> with the new value.</li>
+  <li><code>membersAddUserModal.vue</code> passes <code>:inputValue="form.firstName || ''"</code> down and listens for <code>@input-change</code> to write back.</li>
+</ul>
+<div class="tldr">
+Vue gives you <code>v-model</code> as a convenience on top of exactly this pattern. SourceApp chose to write the pattern out. React only has the pattern &mdash; so porting this file is <em>almost literal</em>.
+</div>
+
+<h2>Translate it</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; what you have</h4>
+<pre><code>&lt;input
+  :value="inputValue"
+  @input="$emit('input-change',
+                $event.target.value)"
+/&gt;
+
+&lt;input-text
+  :name="'firstName'"
+  :inputValue="form.firstName || ''"
+  :maxLength="20"
+  @input-change="
+    (val) =&gt; { form.firstName = val; }"
+&gt;&lt;/input-text&gt;</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; the same, in React&rsquo;s own naming</h4>
+<pre><code>const [form, setForm] = useState(initialForm);
+
+&lt;input
+  name="firstName"
+  value={form.firstName ?? ""}
+  maxLength={20}
+  onChange={(e) =&gt;
+    setForm({
+      ...form,
+      firstName: e.target.value
+    })}
+/&gt;</code></pre>
+  </div>
+</div>
+
+<p><code>inputValue</code> became <code>value</code>; <code>@input-change</code> became <code>onChange</code>; <code>$event.target.value</code> became <code>e.target.value</code>. That&rsquo;s the whole lesson &mdash; <strong>React&rsquo;s plain <code>&lt;input&gt;</code> is SourceApp&rsquo;s <code>input-text</code></strong>, without the wrapper.</p>
+
+<p>One detail to notice, because it trips people: <code>setForm({ ...form, firstName: e.target.value })</code> replaces the whole <code>form</code> object with a copy that has one field changed. You do <em>not</em> set <code>form.firstName = val</code> &mdash; mutating state never re-renders. This is the immutable-update rule that replaced Vue&rsquo;s reactive mutations.</p>
+
+<h2>Why this matters for your mission</h2>
+<p>Every admin screen in SourceApp is form-driven &mdash; user details, training plans, banners, system parameters, all backed by <code>input-text</code> / dropdown / checkbox. That&rsquo;s why the codebase has 100+ usages. In a React port every one of those becomes a controlled component. And because the Vue side already does the explicit handshake, your job is XML-level naming: <code>inputValue &#8594; value</code>, <code>input-change &#8594; onChange</code>. You&rsquo;ll look like a pro to an interviewer because you&rsquo;ll say &ldquo;controlled component&rdquo; with the <code>value</code>/<code>onChange</code> shape instantly.</p>
+
+<h2>Practice &mdash; retrieve, don&rsquo;t peek</h2>
+<p>Cover the React panel above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"What does Vue v-model expand to under the hood?","o":[":value + @input",":model + @change",":bind + @update","input + value="],"a":0,"why":"v-model is sugar for a value prop plus an input event carrying the new value."},
+  {"q":"In React, where does an input&#39;s text state live?","o":["inside the DOM","inside the event","inside a useRef","in component state"],"a":3,"why":"The text is stored in React state (useState) and fed back via value=\"...\" — the DOM never owns it in a controlled input."},
+  {"q":"Which names the same handshake in React?","o":["value + onChange","model + update","value + input","form + submit"],"a":0,"why":"value is the prop, onChange is the callback — the exact React spelling of inputValue + input-change."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Open <code>src/components/form/inputText.vue</code> and <code>src/components/myTeam/membersAddUserModal.vue</code>.</li>
+  <li>In scratch, write a <code>MembersAddUserModal.tsx</code> with one text field: state = <code>{ firstName: "" }</code>; an <code>&lt;input value={...} onChange={...} /&gt;</code> exactly as above.</li>
+  <li>Now port the checkbox variant from <code>showCompleted.vue</code>: it emits <code>update</code> with <code>$event.target.checked</code>. In React the prop is <code>checked={...}</code> and <code>onChange</code> reads <code>e.target.checked</code>. Try it.</li>
+</ol>
+
+<h2>Primary source to read</h2>
+<p><a href="https://react.dev/reference/react-dom/components/input">react.dev &middot; the &lt;input&gt; reference</a> &mdash; note the <code>value</code> table row that says &ldquo;makes it a controlled component&rdquo;. And re-read <a href="https://react.dev/learn/thinking-in-react">Thinking in React</a>; its step 4 answers &ldquo;where does the state live?&rdquo; with the same lifting-state rule you nailed in Lesson 03.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0004-vue-v-model-to-react-controlled-inputs.html">Vue v-model &#8594; React controlled inputs</a> sheet sits next to the others. You now have the full component toolkit. Next lesson: <a href="0005-vite-ts-app-shell.html">the Vite + TypeScript app shell</a> &mdash; we finally stand up the real project and wire the Home page + shell you&rsquo;ve been translating.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If the immutable-object-update (<code>{...form, firstName: val}</code>) feels unfamiliar after years of Vue&rsquo;s reactive mutation, ask me to show it against a real multi-field form like <code>UserGroupDetailsForm.vue</code>. I can also translate <code>inputText.vue</code> into a real reusable <code>InputText.tsx</code> if you want to see how a shared form field looks in React.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

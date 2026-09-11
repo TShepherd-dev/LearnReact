@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Vue SFC → React Function Component</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 01</strong> &middot; Vue SFC &#8594; React Function Component &middot; <a href="../lessons/0001-vue-sfc-to-react-component.html">Lesson 0001</a>
+</div>
+
+<h1>Vue SFC &#8594; React Function Component</h1>
+<p>How a Vue 2 single-file component maps onto a React function component using JSX and hooks. Read the corresponding lesson before relying on this; it is a quick-reference, not a tutorial.</p>
+
+<h2>The big shift</h2>
+<blockquote>
+React components are <strong>JavaScript functions that return JSX</strong>. There is no <code>&lt;template&gt;</code>/<code>&lt;script&gt;</code>/<code>&lt;style&gt;</code> split by default — markup and logic live together. React runs your function on every render and re-renders when state changes. (<a href="https://react.dev/">react.dev</a>)
+</blockquote>
+
+<h2>Skeleton comparison</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; Home.vue</h4>
+<pre><code>&lt;template&gt; ... markup ... &lt;/template&gt;
+&lt;script&gt;
+export default {
+  name: "home",
+  components: { TopBanner, UserWelcome },
+  data() { return { newReleasesIsActive: false } },
+  computed: { ... },
+  methods: { activateNewReleases() {} },
+  created() { /* run once */ }
+}
+&lt;/script&gt;
+&lt;style scoped&gt; ... &lt;/style&gt;</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Home.tsx</h4>
+<pre><code>import { useState } from "react";
+import TopBanner from "./TopBanner";
+import UserWelcome from "./UserWelcome";
+
+export function Home() {
+  const [newReleasesIsActive, setNewReleasesIsActive] = useState(false);
+
+  // created()-equivalent:
+  // const [x, setX] = useState(&lt;init&gt;); // or useEffect(fn, [])
+  return ( /* JSX: markup + logic together */ &lt;main&gt;...&lt;/main&gt; );
+}</code></pre>
+  </div>
+</div>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue concept</th><th>React equivalent</th><th>Notes</th></tr>
+<tr><td><code>&lt;template&gt;</code></td><td>JSX returned from the function</td><td>JSX is JavaScript — ternary/<code>map()</code> instead of directives.</td></tr>
+<tr><td><code>data()</code></td><td><code>useState</code> (per piece of state)</td><td>Each becomes a <code>const [v, setV] = useState(init)</code>.</td></tr>
+<tr><td><code>computed</code></td><td>compute inline / <code>useMemo</code></td><td>Just compute during render; <code>useMemo</code> only when needed.</td></tr>
+<tr><td><code>methods</code></td><td>plain functions in the component</td><td>Define as ordinary <code>function</code> or arrow inside your component.</td></tr>
+<tr><td><code>created()</code> / <code>mounted()</code> (run-once)</td><td><code>useEffect(fn, [])</code></td><td>Empty dependency array = run once. Effects are for <em>synchronization</em>, not lifecycle.</td></tr>
+<tr><td>child via <code>components</code> + kebab tag</td><td><code>import</code> + <code>&lt;Component /&gt;</code></td><td>Use PascalCase; import the function and use it directly.</td></tr>
+<tr><td><code>&lt;child :prop="v"&gt;</code></td><td><code>&lt;Child prop={v} /&gt;</code></td><td>Values are JS: <code>prop={v}</code> passes the variable.</td></tr>
+<tr><td><code>v-if</code></td><td><code>{cond && ...}</code> or ternary</td><td>Plain JS conditional expressions in JSX.</td></tr>
+<tr><td><code>v-for="x in items"</code></td><td><code>{items.map(x =&gt; &lt;Row /&gt;)}</code></td><td>Give each item a stable <code>key</code> prop.</td></tr>
+<tr><td><code>v-bind:class</code> / <code>:class="[...]"</code></td><td><code>className</code> + template string / join</td><td>JSX uses <code>className</code>, not <code>class</code>.</td></tr>
+<tr><td><code>@click</code></td><td><code>onClick</code></td><td><code>onClick={handler}</code>; handlers are JSX props.</td></tr>
+<tr><td><code>$emit</code> child&#8594;parent</td><td>callback <em>prop</em> (<code>onSomething</code>)</td><td>Parent passes a function; child calls it.</td></tr>
+<tr><td><code>this.$t('...')</code> / <code>v-for</code></td><td>import translation function</td><td>i18n handled via a library hook (e.g. react-i18next) — later lesson.</td></tr>
+<tr><td>refs</td><td><code>useRef</code></td><td>Imperative escape hatch; rare in idiomatic React.</td></tr>
+</table>
+
+<h2>Lifecycle mental model</h2>
+<p>Vue splits <em>when code runs</em> into named lifecycle hooks (<code>created</code>, <code>mounted</code>, <code>updated</code>, <code>destroyed</code>). React replaces this with one idea: <strong>your component function runs on every render</strong>. Side effects are re-run by listing what changed in a dependency array. (Source: <a href="https://react.dev/learn">react.dev — Describing the UI</a>, <a href="https://react.dev/learn/lifecycle-of-reactive-effects">Lifecycle of Reactive Effects</a>.)</p>
+
+<h2>Rules of Hooks</h2>
+<blockquote>Hooks (<code>useState</code>, <code>useEffect</code>, ...) must be called at the <strong>top level</strong> of your component, unconditionally, in the same order every render. Don't put them in loops, conditions, or nested functions. If you need a condition, extract a component and put the hook there. (<a href="https://react.dev/reference/rules/rules-of-hooks">Rules of Hooks</a>)</blockquote>
+
+</div>
+</body>
+</html>

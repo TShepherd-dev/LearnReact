@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0001 &middot; Your first React component: from Home.vue</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 01</strong> &middot; The Component Model &middot; <a href="../reference/0001-vue-sfc-to-react-component.html">Reference</a> &middot; <a href="0002-state-and-effects.html">Next</a>
+</div>
+
+<h1>Your first React component: from Home.vue</h1>
+<p>We're porting the SourceApp <strong>Home page and app shell</strong> to React. So let's start where the real file starts: <code>src/views/Home.vue</code> in your Vue codebase. By the end of this ten-minute lesson you'll be able to read that SFC and write its React function-component equivalent skeleton from memory.</p>
+
+<h2>The one idea that unlocks everything</h2>
+<blockquote>
+A React component is just a <strong>JavaScript function that returns JSX</strong>. Your component function runs on every render; React re-runs it whenever your component's state or props change. (Source: <a href="https://react.dev/learn">react.dev &middot; Quick Start</a>)
+</blockquote>
+
+<p>Compare that to Vue, where a component splits into <code>&lt;template&gt;</code>, <code>&lt;script&gt;</code>, and <code>&lt;style&gt;</code>, and where <em>you rarely write the render function yourself</em>. In React, the markup and the logic are the same thing: one function returning JSX. This is <strong>the</strong> mental-model shift from Vue to React.</p>
+
+<h2>Read the real file</h2>
+<p>Open <code>src/views/Home.vue</code> in the SourceApp repo. Notice its shape:</p>
+<ul>
+  <li><code>&lt;template&gt;</code> — the markup: a banner, widgets (<code>userWelcome</code>, <code>teamWelcome</code>), sliders, and a "what's hot" section with two tab buttons.</li>
+  <li><code>&lt;script&gt;</code> — <code>components</code> registers children; <code>data()</code> holds <code>newReleasesIsActive</code>; <code>computed</code>/<code>methods</code> hold logic; <code>created()</code> runs once.</li>
+</ul>
+<blockquote class="vue">
+Vue: template, logic, style are separate blocks. Data is a reactive object; the framework handles re-rendering for you.
+</blockquote>
+
+<h2>Translate it</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; Home.vue (abridged)</h4>
+<pre><code>&lt;template&gt;
+  &lt;top-banner :id="bannerTopId" /&gt;
+  &lt;user-welcome /&gt;
+  &lt;team-welcome v-if="showTeamWelcomeWidget" /&gt;
+  &lt;compliace-slider /&gt;
+  &lt;my-training-slider /&gt;
+  &lt;button @click="activateNewReleases"
+    :class="newReleasesIsActive ? 'active' : ''"&gt;
+    New releases
+  &lt;/button&gt;
+&lt;/template&gt;
+
+&lt;script&gt;
+import TopBanner from "@/components/home/topBanner";
+import UserWelcome from "@/components/home/userWelcome";
+export default {
+  components: { TopBanner, UserWelcome, ... },
+  data() { return { newReleasesIsActive: false } },
+  methods: { activateNewReleases(){ this.newReleasesIsActive = true } }
+}
+&lt;/script&gt;</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Home.tsx (translated)</h4>
+<pre><code>import { useState } from "react";
+import TopBanner from "./TopBanner";
+import UserWelcome from "./UserWelcome";
+
+export function Home() {
+  const [newReleasesIsActive, setNewReleasesIsActive] = useState(false);
+
+  const activateNewReleases = () =>
+    setNewReleasesIsActive(true);
+
+  return (
+    &lt;main&gt;
+      &lt;TopBanner id={bannerTopId} /&gt;
+      &lt;UserWelcome /&gt;
+      {showTeamWelcomeWidget &amp;&amp; &lt;TeamWelcome /&gt;}
+      &lt;ComplianceSlider /&gt;
+      &lt;MyTrainingSlider /&gt;
+      &lt;button
+        onClick={activateNewReleases}
+        className={newReleasesIsActive ? "active" : ""}&gt;
+        New releases
+      &lt;/button&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+  </div>
+</div>
+
+<p>Spot the patterns:</p>
+<ul>
+  <li><strong><code>data()</code> &#8594; <code>useState</code></strong>: <code>newReleasesIsActive</code> becomes a <code>[value, setter]</code> pair.</li>
+  <li><strong><code>methods</code> &#8594; plain functions</strong>: <code>activateNewReleases</code> is just a function; it calls the setter instead of mutating <code>this</code>.</li>
+  <li><strong><code>components</code> + kebab tags &#8594; imports + PascalCase</strong>: import the function and use <code>&lt;TopBanner /&gt;</code>.</li>
+  <li><strong><code>v-if</code> &#8594; <code>{cond &amp;&amp; ...}</code></strong>: plain JS.</li>
+  <li><strong><code>:class</code> &#8594; <code>className</code></strong>: JSX uses <code>className</code>, not <code>class</code>.</li>
+  <li><strong><code>@click</code> &#8594; <code>onClick</code></strong>: events are props, in camelCase.</li>
+</ul>
+
+<h2>Why this matters for your mission</h2>
+<p>Every screen in SourceApp — all 31 views and dozens of components — follows this same SFC shape. Once this single translation is instinctive, you can read any upstream component, and the "port" of the Home page becomes routine rather than mysterious. It's also the #1 thing an Australian React interviewer will watch you do fluidly.</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the React panel above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"Which Vue option becomes useState in a React component?","o":["it owns data","it computes","it holds mthds","it imports comps"],"a":0,"why":"data() holds reactive local state; each piece becomes a useState pair."},
+  {"q":"What replaces v-if in JSX for conditional markup?","o":["use a v-if tag","use a vshow tag","use && or ternary","use a new @if tag"],"a":2,"why":"There is no conditional directive; you write plain JS expressions like cond && <X />."},
+  {"q":"How do you attach a click handler in JSX?","o":["@click=\"fn\"","onClick={fn}","v-on:click=fn","onclick=\"fn\""],"a":1,"why":"Events are camelCase props: onClick, onChange, onSubmit."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Open <code>src/views/Home.vue</code>.</li>
+  <li>Create <code>src/Home.tsx</code> in a throwaway scratch project, and transliterate the component's <strong>structure only</strong> (children tags, one piece of state, one click handler) — no i18n, no Vuex yet. That's enough for this lesson.</li>
+  <li>Struggling with the set-up? Just write the <code>Home</code> function by hand on paper — the point is the shape, not the toolchain.</li>
+</ol>
+
+<h2>Primary source to read</h2>
+<p>The official docs' <a href="https://react.dev/learn">Quick Start</a> and especially <a href="https://react.dev/learn/thinking-in-react">Thinking in React</a>. Read <em>Thinking in React</em> once — it is the closest thing to the Vue mental model rendered in React's one-way-data-flow terms.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0001-vue-sfc-to-react-component.html">Vue SFC &#8594; React Function Component</a> cheat sheet compresses everything here — bookmark it; you'll return to it constantly. Next lesson: <a href="0002-state-and-effects.html">state and effects (the <code>created()</code> replacement)</a>.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If any mapping above felt off, or you want the fuller <em>Thinking in React</em> walkthrough against a specific component in the codebase, ask me — I work against the actual SourceApp source and can show you the translation for any file.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

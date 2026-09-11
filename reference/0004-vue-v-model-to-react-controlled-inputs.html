@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Vue v-model ↔ React controlled inputs</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 04</strong> &middot; Vue v-model &#8594; React controlled inputs &middot; <a href="../lessons/0004-controlled-inputs.html">Lesson 0004</a>
+</div>
+
+<h1>Vue v-model &#8594; React controlled inputs</h1>
+<p>How Vue&rsquo;s <code>v-model</code> (and this codebase&rsquo;s custom <code>:inputValue</code>/<code>@input-change</code> handshake) maps onto React&rsquo;s controlled inputs. Read <a href="../lessons/0004-controlled-inputs.html">Lesson 0004</a> before relying on this; you already know the pattern from <code>membersAddUserModal.vue</code>.</p>
+
+<h2>The mental model</h2>
+<blockquote>
+<code>v-model</code> is sugar for <code>:value</code> + <code>@input</code>. React ships no sugar &mdash; you write the handshake explicitly: <strong>value down, callback up</strong>. An input whose text is driven only by React state is a <em>controlled</em> component. (<a href="https://react.dev/reference/react-dom/components/input">react.dev &middot; &lt;input&gt;</a>)
+</blockquote>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue 2</th><th>React</th><th>Notes</th></tr>
+<tr><td><code>v-model="form.firstName"</code></td><td><code>value={form.firstName ?? ""} onChange={...}</code></td><td>No sugar: the value is a prop, the update is a callback.</td></tr>
+<tr><td><code>:inputValue</code> + <code>@input-change</code> (this repo&rsquo;s custom handshake)</td><td><code>value</code> + <code>onChange</code></td><td>Same shape as what you already write in membersAddUserModal.vue.</td></tr>
+<tr><td><code>@input="$emit('input-change', $event.target.value)"</code></td><td><code>onChange={(e) =&gt; setX(e.target.value)}</code></td><td>Reading the DOM field&rsquo;s value is the one imperative bit; everything else is data.</td></tr>
+<tr><td><code>v-model</code> checkbox</td><td><code>checked={x} onChange={(e) =&gt; setX(e.target.checked)}</code></td><td>Checkbox uses <code>checked</code>, not <code>value</code>.</td></tr>
+<tr><td><code>@input-change="(val) =&gt; form.firstName = val"</code></td><td><code>setForm({ ...form, firstName: e.target.value })</code></td><td>React state is replaced, not mutated: spread the object, patch one field.</td></tr>
+<tr><td>form template + submit</td><td><code>&lt;form onSubmit={handleSubmit}&gt;</code></td><td>Call <code>e.preventDefault()</code> inside the handler.</td></tr>
+<tr><td>uncontrolled input</td><td><code>defaultValue</code> + <code>useRef</code> if truly needed</td><td>Prefer controlled; reach for this only when you must read the DOM.</td></tr>
+</table>
+
+<h2>Skeleton comparison</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; membersAddUserModal.vue</h4>
+<pre><code>&lt;input
+  :value="inputValue"                 &lt;!-- up in the comp --&gt;
+  @input="$emit('input-change',
+                $event.target.value)"
+/&gt;
+
+&lt;input-text
+  :inputValue="form.firstName || ''"
+  @input-change="
+    (val) =&gt; { form.firstName = val; }"
+/&gt;</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; MembersAddUserModal.tsx</h4>
+<pre><code>const [form, setForm] = useState(initialForm);
+
+&lt;input
+  value={form.firstName ?? ""}
+  maxLength={20}
+  onChange={(e) =&gt;
+    setForm({
+      ...form,
+      firstName: e.target.value
+    })}
+/&gt;</code></pre>
+  </div>
+</div>
+
+<h2>Gotchas</h2>
+<ul>
+  <li><strong>Value must come from state.</strong> If only <code>onChange</code> is wired and <code>value</code> is missing, the DOM &ldquo;wins&rdquo; and the box becomes uncontrolled (React warns).</li>
+  <li><strong><code>e.target.value</code> is always a string.</strong> Convert if you need a number (<code>Number(...)</code>).</li>
+  <li><strong>State objects are replaced, not mutated.</strong> Build a new object with spread: <code>{...form, field}</code> &mdash; mutation of <code>form</code> won&rsquo;t re-render.</li>
+  <li><strong>Checkbox ships <code>checked</code>, not <code>value</code>.</strong> Same callback, but the incoming value needs <code>e.target.checked</code>.</li>
+</ul>
+
+</div>
+</body>
+</html>
