@@ -8,7 +8,7 @@ So instead of following a generic course, this repo teaches React the direct way
 
 | Directory | Purpose |
 |---|---|
-| `lessons/` | Self-contained HTML lessons — one tightly-scoped skill each, grounded in a real SourceApp Vue file translated into React. Each ends with a retrieval-practice quiz and a "do it in the real workspace" exercise. |
+| `lessons/` | Self-contained HTML lessons — one tightly-scoped skill each, grounded in a real file from a large production Vue2 SPA translated into React. Each ends with a retrieval-practice quiz and a "do it in the real workspace" exercise. |
 | `reference/` | One-page cheat sheets compressing each lesson (Vue → React term maps, mental models, gotchas) for quick lookup. |
 | `learning-records/` | Notes capturing what's been learned and the current skill level (zone of proximal development) to drive what to teach next. |
 | `assets/` | Reusable teaching components: shared stylesheet (`lesson.css`) and the quiz widget (`quiz.js`). |
@@ -19,8 +19,8 @@ So instead of following a generic course, this repo teaches React the direct way
 
 ## How the teaching works
 
-- **Every lesson is grounded in a real file** from the SourceApp Vue2 codebase (`src/views/Home.vue`, `src/components/myTraining/pagination.vue`, `src/components/form/inputText.vue`, ...) and translates it into the idiomatic React equivalent. No toy examples.
-- **The port is real, the data is mocked** — no dependency on the SourceApp backend, so progress is never blocked by auth or API availability.
+- **Every lesson is grounded in a real file** from the source Vue2 codebase (`src/views/Home.vue`, `src/components/myTraining/pagination.vue`, `src/components/form/inputText.vue`, ...) and translates it into the idiomatic React equivalent. No toy examples.
+- **The port is real, the data is mocked** — no dependency on the source app's backend, so progress is never blocked by auth or API availability.
 - **Retrieval practice over re-reading** — each lesson ends with a quiz; answers are session-tracked and can be copied back to the teacher agent for your learning records.
 
 ## Progress
@@ -44,6 +44,6 @@ npm run dev
 
 ## Thanks
 
-The lessons are authored and adapted with the assistance of an AI teaching agent that reads the SourceApp source directly and grounds every lesson in its real code.
+The lessons are authored and adapted with the assistance of an AI teaching agent that reads the source Vue codebase directly and grounds every lesson in its real code.
 
 License: MIT (see `LICENSE`).
