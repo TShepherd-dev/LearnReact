@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Vuex → React state management</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 06</strong> &middot; Vuex &#8594; React state &middot; <a href="../lessons/0006-state-management.html">Lesson 0006</a>
+</div>
+
+<h1>Vuex &#8594; React State Management</h1>
+<p>How a Vuex store (modules, state, getters, mutations, actions, map-helpers) maps onto React. Read <a href="../lessons/0006-state-management.html">Lesson 0006</a> before relying on this; it is a quick reference, not a tutorial.</p>
+
+<h2>The mental model</h2>
+<blockquote>
+Vuex is a <strong>single global store outside your component tree</strong> that every component reaches into via <code>this.$store</code> / map-helpers. React has <strong>no built-in global store</strong> — state lives inside components. App-wide state is <em>lifted</em> to a provider higher up the tree and shared via Context; frequently-changing server data is owned by a query layer, not a store. (<a href="https://react.dev/learn/scaling-up-with-reducer-and-context">react.dev &middot; Scaling Up with Reducer and Context</a>)
+</blockquote>
+
+<h2>First: what kind of state is it?</h2>
+<table>
+<tr><th>Kind of state</th><th>Where it lives in React</th><th>Vuex habit to unlearn</th></tr>
+<tr><td>Local to one component (tabs, form fields)</td><td><code>useState</code> / <code>useReducer</code> in that component</td><td>In Vuex you'd often hoist even local toggles into a module; React keeps them local.</td></tr>
+<tr><td>Shared app-wide <em>client</em> state (menu open, search open, notification count)</td><td>Lifted to a provider: <code>useReducer</code> + Context (zero deps), or a Zustand store (~1.2&nbsp;KB, no provider)</td><td>This is the part that genuinely replaces a Vuex module.</td></tr>
+<tr><td>Data fetched from an API (unread counts, listings, user)</td><td><strong>TanStack Query</strong> (cache, refetch, invalidation) or fetch-in-effect — <em>not</em> a client store</td><td>Vuex actions did API + caching duty; in React 2026 that is server state, not store state.</td></tr>
+</table>
+
+<h2>Term-by-term map (module &#8594; reducer + context)</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vuex</span> &middot; store/shell.js (abridged)</h4>
+<pre><code>export default {
+  namespaced: true,          // "shell."
+  state: {
+    footer: false,
+    header: false,
+    isSearchOpen: false,
+    isMobileMenuOpen: false,
+    isProfileDropdownOpen: false,
+    notificationCount: 0
+  },
+  mutations: {
+    showFooter(state) { state.footer = true },
+    toggleSearch(state, open) { state.isSearchOpen = open },
+    setNotificationCount(state, n) { state.notificationCount = n }
+  },
+  actions: {
+    toggleSearch({ commit }, open) {
+      commit('toggleSearch', open);
+      commit('toggleMobileMenu', false);
+      commit('toggleProfileDropDown', false);
+    }
+  },
+  getters: { getAllowTranslations: s => s.allowTranslations }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; ShellContext.jsx</h4>
+<pre><code>const ShellCtx = createContext(null);
+
+function shellReducer(state, action) {
+  switch (action.type) {
+    case 'showFooter': return { ...state, footer: true };
+    case 'toggleSearch':
+      return { ...state, isSearchOpen: action.open,
+               isMobileMenuOpen: false,
+               isProfileDropdownOpen: false };
+    case 'setNotificationCount':
+      return { ...state,
+               notificationCount: action.count };
+    default: throw Error('Unknown: ' + action.type);
+  }
+}
+
+export function ShellProvider({ children }) {
+  const [state, dispatch] = useReducer(shellReducer, {
+    footer: false, header: false,
+    isSearchOpen: false, isMobileMenuOpen: false,
+    isProfileDropdownOpen: false, notificationCount: 0
+  });
+  return (
+    &lt;ShellCtx value={state}&gt;
+      &lt;ShellDispatchCtx value={dispatch}&gt;{children}&lt;/ShellDispatchCtx&gt;
+    &lt;/ShellCtx&gt;
+  );
+}
+export const useShell = () =&gt; useContext(ShellCtx);
+export const useShellDispatch = () =&gt; useContext(ShellDispatchCtx);</code></pre>
+  </div>
+</div>
+
+<h2>Term-by-term map (table)</h2>
+<table>
+<tr><th>Vuex</th><th>React equivalent</th><th>Notes</th></tr>
+<tr><td><code>new Vuex.Store({ modules })</code></td><td>nothing global — per-slice providers</td><td>Each slice is its own file (ShellContext.jsx). No single root store required.</td></tr>
+<tr><td>module <code>state</code></td><td>reducer initial state (or <code>useState</code>)</td><td>Plain object returned as <code>useReducer(reducer, initialState)</code>.</td></tr>
+<tr><td>module <code>mutations</code></td><td><code>case</code> arms in the reducer</td><td>Reducer must return a new object (spread) — never mutate.</td></tr>
+<tr><td><code>commit('x', p)</code></td><td><code>dispatch({ type:'x', ...p })</code></td><td>One dispatch function, action-shaped objects.</td></tr>
+<tr><td>module <code>actions</code> (sync)</td><td>plain functions in the provider that call <code>dispatch</code></td><td>Orchestration like &ldquo;toggle search closes the others&rdquo; lives in the action function.</td></tr>
+<tr><td>module <code>actions</code> (async <code>api.get</code>)</td><td>TanStack Query query/hook; or <code>useEffect</code> fetch + local state</td><td>API data is <em>server state</em> — the store should not cache it in 2026 React.</td></tr>
+<tr><td>module <code>getters</code></td><td>derive during render / selector functions</td><td><code>const hasFooter = useShell().footer;</code> — computed inline.</td></tr>
+<tr><td><code>namespaced: true</code></td><td>one hook/file per concern</td><td><code>useShell()</code>, <code>useCatalogue()</code>, &hellip; — namespace by file, not by string.</td></tr>
+<tr><td><code>mapState('shell', [...])</code></td><td><code>useShell()</code> then destructure</td><td>Custom hook wrapping <code>useContext</code>.</td></tr>
+<tr><td><code>mapGetters('shell', [...])</code></td><td>selectors in the hook</td><td>Derived values computed at read site.</td></tr>
+<tr><td><code>mapActions('shell', [...])</code></td><td>functions returned by the provider/hook</td><td>Provider passes <code>dispatch</code>; consumers wrap their own action functions.</td></tr>
+<tr><td><code>mapMutations('shell', [...])</code></td><td><code>dispatch</code> directly</td><td>No separate mutations concept — that's the whole <code>case</code>.</td></tr>
+<tr><td><code>this.$store.state.x</code> in template</td><td><code>useShell().x</code> in component</td><td>The store is a hook now, not a magic global.</td></tr>
+<tr><td>vuex-persistedstate plugin</td><td>manual sessionStorage / Zustand <code>persist</code> middleware</td><td>Only persist what genuinely needs to survive refresh.</td></tr>
+</table>
+
+<h2>Context 101 (the &ldquo;pass without prop drilling&rdquo; part)</h2>
+<ul>
+<li>Context is <strong>dependency injection</strong>: a provider makes a value available to the whole subtree; any descendant reads it with <code>useContext</code>.</li>
+<li>Every consumer re-renders when the provider value changes — fine for menu/search toggles; a performance trap for high-frequency updates (that&rsquo;s the Zustand/selector case).</li>
+<li>Convention (from the React docs): keep <strong>two</strong> contexts — one for the value, one for the <code>dispatch</code> function — plus a <code>useX()</code>/<code>useXDispatch()</code> hook pair per file.</li>
+</ul>
+
+<h2>Put a library on it? (2026 reality)</h2>
+<ul>
+<li>App-wide UI state, want zero deps: <strong>reducer + context</strong> (what this sheet shows).</li>
+<li>App-wide UI state, want lean &amp; widely-used: <strong>Zustand 5</strong> — ~1.2&nbsp;KB gzipped, no Provider needed, selector-based subscriptions re-render only what reads the changed slice. The 2026 de facto standard for client state.</li>
+<li>Large multi-team app needing audit trails/time-travel devtools: <strong>Redux Toolkit</strong> (still the enterprise standard).</li>
+<li>Anything fetched from an API: <strong>TanStack Query</strong>, not the store.</li>
+</ul>
+<p>Sources: <a href="https://wecon.dev/en/blog/articles/react-in-2026-the-complete-guide-hooks-server-components-concurrent-features-beyond-1">React in 2026 (Wecon)</a>; <a href="https://dev.to/digitalunicon/state-management-in-2026-redux-vs-zustand-vs-react-context-5336">State Management in 2026 (dev.to)</a>.</p>
+
+</div>
+</body>
+</html>

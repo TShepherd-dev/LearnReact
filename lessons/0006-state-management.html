@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0006 &middot; State management: what replaces Vuex</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 06</strong> &middot; State Management &middot; <a href="../reference/0006-vuex-to-react-state.html">Reference</a> &middot; <a href="../lessons/0005-vite-app-shell.html">Lesson 05</a> &middot; <a href="0007-typescript-intro.html">Next</a>
+</div>
+
+<h1>State management: what replaces Vuex</h1>
+<p>Every lesson so far touched the store — <code>mapMutations("catalogue", ...)</code>, <code>mapActions("myTraining", ...)</code>, <code>$store.state.isMobileNavBeingUsed</code>. Now the big question you'd hit on day one of the port: <strong>what replaces the Vuex store itself?</strong> By the end of this lesson you'll be able to read any source-app store module and translate it into React state-and-context code, from memory.</p>
+
+<h2>The mental-model shift</h2>
+<blockquote>
+Vuex is <strong>one global store outside your components</strong> that everything reaches into. React has <strong>no store object</strong> — state lives in components, and "global" state is just state <em>lifted</em> to a provider near the top and shared down via Context. (<a href="https://react.dev/learn/scaling-up-with-reducer-and-context">react.dev</a>)
+</blockquote>
+
+<p>That's the whole trick. Vuex makes the store a magical global; React makes you <em>own</em> it — literally, as component state in a provider. The Vuex concepts don't vanish; they translate:</p>
+<ul>
+  <li><strong>module <code>state</code></strong> &#8594; the initial state object in a provider</li>
+  <li><strong><code>mutations</code> + <code>commit()</code></strong> &#8594; a <code>useReducer</code> and its <code>dispatch()</code></li>
+  <li><strong><code>actions</code></strong> &#8594; plain functions in the provider that call <code>dispatch</code></li>
+  <li><strong><code>getters</code></strong> &#8594; values derived during render (no cache to buy you anything)</li>
+  <li><strong><code>mapState/mapGetters/mapActions/mapMutations</code></strong> &#8594; a hook like <code>useShell()</code></li>
+</ul>
+
+<h2>Read the real file</h2>
+<p>Open <code>src/store/shell.js</code> — a tiny, self-contained, <code>namespaced: true</code> module. It owns shell UI state: <code>header</code>, <code>footer</code>, <code>isMobileMenuOpen</code>, <code>isProfileDropdownOpen</code>, <code>isSearchOpen</code>, <code>notificationCount</code>. And a single async action, <code>getUnreadCounts</code>, which calls <code>api.get(...)</code> then commits counts.</p>
+
+<p>Now look at how views consume it. In <code>src/views/Home.vue</code> you'll find:</p>
+<pre><code>computed: {
+  ...mapGetters("account", ["getCurrentUser", "isManager"]),
+  ...mapState("account", ["metrics", "isMetricsLoading"]),
+  ...mapState("catalogue", ["parentTags", "isParentTagLoading"]),
+},
+methods: {
+  ...mapActions("shell", ["toggleCacheListing"]),
+  ...mapMutations("catalogue", ["setParentTagLoading"]),
+}</code></pre>
+<div class="tldr">
+Vuex reaches <em>into</em> components via these map-helpers. React turns this inside out: the state lives <em>in</em> the tree (a provider), and components read it with a hook.
+</div>
+
+<h2>Translate it</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; store/shell.js (abridged)</h4>
+<pre><code>const state = {
+  header: false, isSearchOpen: false,
+  isMobileMenuOpen: false, notificationCount: 0
+};
+const mutations = {
+  showHeader(s) { s.header = true },
+  toggleSearch(s, open) { s.isSearchOpen = open }
+};
+const actions = {
+  toggleSearch({ commit }, open) {
+    commit('toggleSearch', open);
+    commit('toggleMobileMenu', false);
+  },
+  async getUnreadCounts({ commit, rootGetters }) {
+    const user = rootGetters['account/getCurrentUser'];
+    const data = await api.get(`api/user/getUnreadCounts/${user.UserId}`);
+    commit('setNotificationCount', data.Output.Notifications);
+  }
+};
+export default { namespaced: true, state, mutations, actions }</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; ShellContext.jsx (translated)</h4>
+<pre><code>const ShellCtx = createContext(null);
+const ShellDispatchCtx = createContext(null);
+
+function shellReducer(state, action) {
+  switch (action.type) {
+    case 'showHeader':    return { ...state, header: true };
+    case 'toggleSearch':
+      return { ...state, isSearchOpen: action.open,
+               isMobileMenuOpen: false };
+    default: throw Error('Unknown: ' + action.type);
+  }
+}
+
+export function ShellProvider({ children }) {
+  const [state, dispatch] = useReducer(
+    shellReducer, initialShellState);
+  return (
+    &lt;ShellCtx value={state}&gt;
+      &lt;ShellDispatchCtx value={dispatch}&gt;
+        {children}
+      &lt;/ShellDispatchCtx&gt;
+    &lt;/ShellCtx&gt;
+  );
+}
+export const useShell = () =&gt; useContext(ShellCtx);
+export const useShellDispatch = () =&gt; useContext(ShellDispatchCtx);</code></pre>
+  </div>
+</div>
+
+<p>Spot the patterns:</p>
+<ul>
+  <li><strong><code>state</code> + <code>mutations</code> &#8594; one <code>reducer</code>.</strong> Each mutation becomes a <code>case</code>; <code>commit(name, payload)</code> becomes <code>dispatch({type, ...payload})</code>. The reducer returns new state every time — React needs fresh references to re-render.</li>
+  <li><strong><code>actions</code> &#8594; functions in the provider.</strong> Sync orchestration (one commit triggering others) becomes a function that calls <code>dispatch</code> a few times.</li>
+  <li><strong><code>mapState/mapActions</code> &#8594; custom hooks.</strong> <code>useShell()</code> reads state, <code>useShellDispatch()</code> reads <code>dispatch</code> — this is your replacement for the map-helpers.</li>
+  <li><strong>The async part is <em>not</em> store state.</strong> In 2026, API data is <em>server state</em> and belongs in TanStack Query (cache + refetch + loading states), with the store keeping only genuinely client-side UI state. (<a href="https://react.dev/learn/build-a-react-app-from-scratch">react.dev &middot; data fetching as an ecosystem concern</a>, <a href="https://dev.to/digitalunicon/state-management-in-2026-redux-vs-zustand-vs-react-context-5336">community consensus 2026</a>)</li>
+</ul>
+
+<blockquote class="react">
+React rule of thumb from the docs: &ldquo;every component that reads state gets re-rendered when it changes — so keep shared state as low as needed, and developers often pass the <em>dispatch function</em> down via a second context.&rdquo; (<a href="https://react.dev/learn/scaling-up-with-reducer-and-context">react.dev &middot; Scaling Up with Reducer and Context</a>)
+</blockquote>
+
+<h2>Why this matters for your mission</h2>
+<p>Your port's <strong>app shell is store-driven</strong>: the header/footer toggles, mobile menu, search overlay, and notification badges all read <code>shell</code> state. Translating <code>store/shell.js</code> is literally the &ldquo;store wiring&rdquo; item of the first slice. And in an interview, &ldquo;how does global state work in React?&rdquo; is the #1 Vue-era question — the answer here (there's no store; you lift state and share it with context; API data lives in a query layer) is the one they're listening for.</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the React panel above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"In translated React, what is a Vuex module on a store?","o":["an API service layer","a root store module","a context slice pair","a plain state object"],"a":2,"why":"A namespaced Vuex module becomes one slice: a context file with provider + useShell/useShellDispatch hooks."},
+  {"q":"Vuex commit(\"x\", p) becomes what in React?","o":["call an API route","emit an event out","mutate a ref object","dispatch with a type"],"a":3,"why":"commit(name, payload) maps to dispatch({type,...}) on the useReducer dispatch function."},
+  {"q":"Which data belongs in a query cache, not a store?","o":["a menu open flag","API response data","the form input","a modal state"],"a":1,"why":"API responses are server state; cache/refetch them with TanStack Query, not a client store."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Open <code>src/store/shell.js</code> and the shell-consuming pieces you translated in lesson 05 (<code>frontend.vue</code> / <code>header.vue</code> usage of <code>footer</code> / <code>header</code>).</li>
+  <li>In <code>demo-react-app/src/frontend/</code>, create <code>ShellContext.jsx</code> with the reducer + <code>ShellProvider</code> + <code>useShell</code> hooks exactly as above.</li>
+  <li>Wire it: wrap your <code>App</code> (from lesson 05) in <code>&lt;ShellProvider&gt;</code>, then make <code>ShellHeader</code> read <code>useShell().header</code> and render only when true — mirroring <code>v-if=header</code>.</li>
+  <li>Leave <code>getUnreadCounts</code> as a &ldquo;server state — later&rdquo; comment. Don't put API data in the reducer.</li>
+</ol>
+
+<h2>Primary source to read</h2>
+<p>The official docs: <a href="https://react.dev/learn/scaling-up-with-reducer-and-context">Scaling Up with Reducer and Context</a> (the exact pattern this lesson uses) and <a href="https://react.dev/learn/passing-data-deeply-with-context">Passing Data Deeply with Context</a> for the Context mechanics. Read the first one once fully — the task-tracker walkthrough is the Vuex-module-to-React translation you just did.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>Bookmark the one-page <a href="../reference/0006-vuex-to-react-state.html">Vuex &#8594; React state</a> cheat sheet. Next lesson — <a href="0007-typescript-intro.html">TypeScript (JSX &#8594; TSX)</a> — turns this whole refactored demo app into typed React: the &ldquo;now the editor catches your typo'd prop names&rdquo; payoff.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> Curious how a <em>big</em> source-app module (say the <code>catalogue</code> or <code>account</code> one with many actions/getters/namespaced calls) would translate? Ask me to walk one against this pattern, or to show how Zustand (the 2026 library default) shrinks this same <code>ShellContext.jsx</code> to a few lines.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import TeamGreeting from '../components/TeamGreeting.jsx';
-import MyTraining from '../components/MyTraining.jsx';
-import Pagination from '../components/Pagination.jsx';
-import MembersAddUser from '../components/MembersAddUser.jsx';
-import CauseCrash from '../components/CauseCrash.jsx';
+import TeamGreeting from '../../../components/TeamGreeting.jsx';
+import Pagination from '../../../components/Pagination.jsx';
+import MembersAddUser from '../../../components/MembersAddUser.jsx';
+import CauseCrash from '../../../components/CauseCrash.jsx';
 
 const initialForm = {
     firstName: '',
@@ -20,7 +19,6 @@ export default function Home() {
       <h2>Home</h2>
       
       <TeamGreeting /><br/>
-      <MyTraining /><br/>
       <br/>
       <p>Count: {count}</p>
       <Pagination start={count} total={100} pageSize={13} onPage={onPage} /><br/>
