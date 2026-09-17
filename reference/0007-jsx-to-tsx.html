@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: JSX → TSX (types define the component contract)</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 07</strong> &middot; JSX &#8594; TSX &middot; <a href="../lessons/0007-typescript-intro.html">Lesson 0007</a>
+</div>
+
+<h1>JSX &#8594; TSX: types define the component contract</h1>
+<p>How to move a Vite + React app from plain JSX to TypeScript, and how to type the pieces you've already built (props, hook state, reducer actions, route tables). A quick reference — read <a href="../lessons/0007-typescript-intro.html">Lesson 0007</a> first.</p>
+
+<h2>The big shift</h2>
+<blockquote>
+JSX is JavaScript with XML-ish markup. <strong>TSX is that same file with a compile-time type checker on top</strong>. Nothing about runtime behaviour changes — you get the same app — but the editor now turns "wrong prop name" and "wrong value shape" into red squiggles and a <code>tsc</code> failure instead of a confusing runtime <code>undefined</code>. Your 15 years of C# will feel at home: this is the compiler catching bugs before the browser runs. (<a href="https://www.typescriptlang.org/">typescriptlang.org</a>)
+</blockquote>
+
+<h2>Setup (once per project)</h2>
+<pre><code># in demo-react-app
+npm i -D typescript          # @types/react &amp; @types/react-dom already present
+
+# tsconfig.json (Vite React template defaults)
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",          // automatic runtime — no "import React" needed
+    "noEmit": true,              // Vite builds; tsc only type-checks
+    "strict": true,
+    "allowJs": true,             // let existing .jsx files keep working while migrating
+    "skipLibCheck": true,
+    "types": ["vite/client"],
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true // type-only imports need "import type"
+  },
+  "include": ["src"]
+}
+</code></pre>
+<div class="side">Key invariant: with <code>allowJs: true</code> + <code>checkJs: false</code>, you can rename <code>.jsx</code> &#8594; <code>.tsx</code> and add types <strong>one file at a time</strong>. The app keeps running while you migrate.</div>
+
+<h2>Typing a component's props</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>JSX</span> &middot; Pagination.jsx (before)</h4>
+<pre><code>export default function Pagination({ start, total, pageSize, onPage }) {
+  const totalPages = Math.ceil(total / pageSize);
+  const next = () =&gt; {
+    if (start === totalPages) return;
+    onPage(start + 1);   // onPage is *anything*
+  };
+  return (...);
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>TSX</span> &middot; Pagination.tsx (after)</h4>
+<pre><code>type PaginationProps = {
+  start: number;
+  total: number;
+  pageSize: number;
+  onPage: (page: number) =&gt; void;
+};
+
+export default function Pagination(
+  { start, total, pageSize, onPage }: PaginationProps
+) {
+  const totalPages = Math.ceil(total / pageSize);
+  const next = () =&gt; {
+    if (start === totalPages) return;
+    onPage(start + 1);  // type-checked: must pass a number
+  };
+  return (...);
+}</code></pre>
+  </div>
+</div>
+
+<p>Now a parent that passes <code>&lt;Pagination total="one-hundred" /&gt;</code> or forgets <code>onPage</code> fails to compile. The prop list <em>is</em> the contract between components — TS makes it checked, not an afterthought.</p>
+
+<h2>Typing hook state and reducer actions</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>JSX</span> &middot; ShellCtxProvider.jsx (before)</h4>
+<pre><code>const initialShellState = {
+  header: true, showSideMenu: false,
+  isSearchOpen: false, isMobileMenuOpen: false,
+};
+function shellReducer(state, action) {
+  switch (action.type) {
+    case 'showHeader': return { ...state, header: true };
+    case 'setSideMenu': return { ...state, showSideMenu: action.show };
+    case 'toggleSearch':
+      return { ...state, isSearchOpen: action.open, isMobileMenuOpen: false };
+    default: throw Error('Unknown: ' + action.type);
+  }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>TSX</span> &middot; ShellCtxProvider.tsx (after)</h4>
+<pre><code>type ShellState = {
+  header: boolean; showSideMenu: boolean;
+  isSearchOpen: boolean; isMobileMenuOpen: boolean;
+};
+
+type ShellAction =
+  | { type: 'showHeader' }
+  | { type: 'setSideMenu'; show: boolean }
+  | { type: 'toggleSearch'; open: boolean };
+
+const initialShellState: ShellState = {
+  header: true, showSideMenu: false,
+  isSearchOpen: false, isMobileMenuOpen: false,
+};
+function shellReducer(state: ShellState, action: ShellAction): ShellState {
+  switch (action.type) {
+    case 'showHeader': return { ...state, header: true };
+    case 'setSideMenu': return { ...state, showSideMenu: action.show };
+    case 'toggleSearch':
+      return { ...state, isSearchOpen: action.open, isMobileMenuOpen: false };
+    default: throw Error('Unknown: ' + action.type);
+  }
+}</code></pre>
+  </div>
+</div>
+
+<p>The <strong>discriminated union</strong> <code>ShellAction</code> is the C#-equivalent of typing each action — <code>action.type</code> pins which payload fields exist, so <code>action.show</code> inside the <code>'setSideMenu'</code> case is typed, and a typo like <code>'showHeadder'</code> is a compile error. <code>useReducer(shellReducer, initialShellState)</code> then infers <code>dispatch</code> to only accept valid actions.</p>
+
+<h2>Typing the route table</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>JSX</span> &middot; ShellRouteTable.jsx (before)</h4>
+<pre><code>const appRoutes = [
+  {
+    path: "/", name: "home",
+    componentPath: "../views/frontend/Home/Home.jsx",
+    meta: {
+      menuOptions: {
+        display: true, displayLocation: "topmenu",
+        displayOrder: 1, menuIcon: "fal fa-home fa-fw",
+        showSideMenu: false
+      },
+      tkeys: { menuitem: "app.pageTitle.home" }
+    }
+  },
+  // ...
+];
+
+export default appRoutes;</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>TSX</span> &middot; ShellRouteTable.tsx (after)</h4>
+<pre><code>export type MenuLocation = "topmenu" | "sidemenu";
+
+export type AppRoute = {
+  path: string;
+  name: string;
+  componentPath: string;
+  meta: {
+    menuOptions: {
+      display: boolean;
+      displayLocation: MenuLocation;
+      displayOrder: number;
+      menuIcon: string;
+      showSideMenu: boolean;
+    };
+    tkeys: { menuitem: string };
+  };
+};
+
+const appRoutes: AppRoute[] = [
+  { path: "/", name: "home",
+    componentPath: "../views/frontend/Home/Home.jsx",
+    meta: { menuOptions: { display: true,
+      displayLocation: "topmenu", displayOrder: 1,
+      menuIcon: "fal fa-home fa-fw", showSideMenu: false },
+      tkeys: { menuitem: "app.pageTitle.home" } } },
+  // ...
+];
+
+export default appRoutes;</code></pre>
+  </div>
+</div>
+
+<p><code>displayLocation: MenuLocation</code> means <code>ShellLayout</code>'s <code>.filter(r =&gt; r.meta?.menuOptions?.displayLocation === 'topmenu')</code> is now checked against a closed set — and consumers get autocomplete for exactly <code>"topmenu" | "sidemenu"</code>.</p>
+
+<h2>One-file-at-a-time rule</h2>
+<table>
+<tr><th>Keep working while migrating</th><th>How</th></tr>
+<tr><td><code>allowJs: true</code> in tsconfig</td><td>Existing <code>.jsx</code> files stay valid; TS doesn't check them (unless <code>checkJs: true</code>).</td></tr>
+<tr><td>Rename <code>.jsx</code> &#8594; <code>.tsx</code> only when you're ready to type it</td><td>One component at a time; the app runs between steps.</td></tr>
+<tr><td>Use <code>import type</code> for pure-type imports</td><td><code>verbatimModuleSyntax</code> requires it for erased-at-runtime imports.</td></tr>
+<tr><td>Type public boundaries first</td><td>Props of leaf components + the route table give the most compile-time safety fastest.</td></tr>
+</table>
+
+<h2>Common gotchas</h2>
+<ul>
+  <li>No <code>import React from 'react'</code> needed — with <code>jsx: "react-jsx"</code> the automatic runtime is implicit. (<a href="https://www.typescriptlang.org/tsconfig#jsx">tsconfig jsx</a>)</li>
+  <li>Event handlers: type them via the JSX element's inference — <code>onClick={(e) =&gt; ...}</code> — <code>e</code> is inferred as <code>React.MouseEvent&lt;...&gt;</code> automatically; you don't hand-write it.</li>
+  <li>State setters: <code>useState(1)</code> infers <code>number</code>; <code>useState&lt;number&gt;(1)</code> only needed when inference can't see the type.</li>
+  <li>If a parent passes the wrong prop type, fix the <em>parent's call</em> or the <em>child's type</em> — the error message names the file and line.</li>
+</ul>
+
+<h2>Sources</h2>
+<ul>
+  <li><a href="https://www.typescriptlang.org/docs/">TypeScript official docs</a> and <a href="https://www.typescriptlang.org/tsconfig">TSConfig reference</a></li>
+  <li><a href="https://react.dev/learn/typescript">react.dev &middot; Adding TypeScript</a> and <a href="https://react.dev/learn/typescript">Using TypeScript with React</a></li>
+  <li><a href="https://vite.dev/guide/">Vite guide</a> (templates ship a strict tsconfig)</li>
+</ul>
+
+</div>
+</body>
+</html>

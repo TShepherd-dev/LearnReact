@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0007 &middot; From JSX to TSX: types define the component contract</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 07</strong> &middot; TypeScript &middot; <a href="../reference/0007-jsx-to-tsx.html">Reference</a> &middot; <a href="../lessons/0006-state-management.html">Lesson 06</a> &middot; <a href="0008-home-page-with-mock-data.html">Next</a>
+</div>
+
+<h1>From JSX to TSX: types define the component contract</h1>
+<p>Every component you've built in <code>demo-react-app</code> has an <em>implicit</em> contract: <code>Pagination</code> <em>quietly expects</em> <code>start</code>, <code>total</code>, <code>pageSize</code> and <code>onPage</code>, but nothing stops a parent from passing <code>total="twenty"</code>. This lesson converts that silent agreement into a <strong>checked, compiler-enforced one</strong> — by renaming your JSX files to TSX and typing the props, the reducer, and the route table. From your C# background this is instantly familiar: it's the compiler catching bugs before the browser runs.</p>
+
+<h2>The one idea that unlocks everything</h2>
+<blockquote>
+<strong>TSX is the same JSX file with a compile-time type checker.</strong> Nothing about how the app runs changes — but the shape of what flows between components (props, state, dispatch, routes) becomes explicit and verified before you press F5. (<a href="https://www.typescriptlang.org/docs/">typescriptlang.org</a>)
+</blockquote>
+
+<p>TypeScript does not change React. It changes <em>when</em> you find out you got a contract wrong: from a confusing runtime <code>undefined</code> in the browser to a red squiggle and a <code>tsc</code> error in the editor.</p>
+
+<h2>Read the real file — Pagination.jsx</h2>
+<p>Open <code>demo-react-app/src/components/Pagination.jsx</code> (which we translated from the source <code>pagination.vue</code> back in lesson 0003). It declares four props by destructuring:</p>
+<div class="panel react" style="flex:1 1 auto; margin:1.2em 0">
+  <h4><span>JSX</span> &middot; Pagination.jsx today</h4>
+<pre><code>export default function Pagination({ start, total, pageSize, onPage }) {
+  const totalPages = Math.ceil(total / pageSize);
+  const next = () =&gt; {
+    if (start === totalPages) return;
+    onPage(start + 1);
+  };
+  // ...
+}</code></pre>
+</div>
+<p>Nothing enforces that <code>total</code> is a number, that <code>pageSize</code> isn't zero, or that <code>onPage</code> is even a function. If <code>Home.jsx</code> passes <code>total="100"</code> by mistake, <code>Math.ceil("100" / 13)</code> happens to work — until the day it doesn't, and your pagination silently breaks with no error at all.</p>
+
+<h2>Translate it</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>JSX</span> &middot; Pagination.jsx (before)</h4>
+<pre><code>export default function Pagination(
+  { start, total, pageSize, onPage }
+) {
+  const totalPages = Math.ceil(total / pageSize);
+  const next = () =&gt; {
+    if (start === totalPages) return;
+    onPage(start + 1);
+  };
+  const prev = () =&gt; {
+    if (start === 1) return;
+    onPage(start - 1);
+  };
+  return (...buttons...);
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>TSX</span> &middot; Pagination.tsx (after)</h4>
+<pre><code>type PaginationProps = {
+  start: number;
+  total: number;
+  pageSize: number;
+  onPage: (page: number) =&gt; void;
+};
+
+export default function Pagination(
+  { start, total, pageSize, onPage }: PaginationProps
+) {
+  const totalPages = Math.ceil(total / pageSize);
+  const next = () =&gt; {
+    if (start === totalPages) return;
+    onPage(start + 1);
+  };
+  const prev = () =&gt; {
+    if (start === 1) return;
+    onPage(start - 1);
+  };
+  return (...buttons...);
+}</code></pre>
+  </div>
+</div>
+
+<p>Read the C# in it:</p>
+<ul>
+  <li><strong><code>type PaginationProps = {...}</code></strong> — a property contract, like a record/interface. <code>&lt;Pagination total="one-hundred" /&gt;</code> no longer compiles.</li>
+  <li><strong><code>(page: number) =&gt; void</code></strong> — <code>onPage</code> takes exactly a number and returns nothing. This is the killer: a callback that's typed catches the mistake <em>at the call site</em>, in the parent, along with the message "Type 'string' is not assignable to type 'number'".</li>
+  <li><strong>Same runtime code</strong> — the type annotations are stripped at build time. The browser runs identical JavaScript.</li>
+</ul>
+
+<h2>Type the state and the reducer too</h2>
+<p>Now the shell context you built in lesson 0006 — <code>ShellCtxProvider.jsx</code>. In JSX, <code>shellReducer</code> accepts <em>any</em> action object and returns anything. Type it with a <strong>discriminated union</strong> (your C#-brain already knows this as a tagged type / F# union):</p>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>JSX</span> &middot; ShellCtxProvider.jsx (before)</h4>
+<pre><code>const initialShellState = {
+  header: true, showSideMenu: false,
+  isSearchOpen: false, isMobileMenuOpen: false,
+};
+function shellReducer(state, action) {
+  switch (action.type) {
+    case 'showHeader':
+      return { ...state, header: true };
+    case 'setSideMenu':
+      return { ...state, showSideMenu: action.show };
+    case 'toggleSearch':
+      return { ...state, isSearchOpen: action.open,
+               isMobileMenuOpen: false };
+    default: throw Error('Unknown: ' + action.type);
+  }
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>TSX</span> &middot; ShellCtxProvider.tsx (after)</h4>
+<pre><code>type ShellState = {
+  header: boolean;
+  showSideMenu: boolean;
+  isSearchOpen: boolean;
+  isMobileMenuOpen: boolean;
+};
+
+type ShellAction =
+  | { type: 'showHeader' }
+  | { type: 'setSideMenu'; show: boolean }
+  | { type: 'toggleSearch'; open: boolean };
+
+const initialShellState: ShellState = {
+  header: true, showSideMenu: false,
+  isSearchOpen: false, isMobileMenuOpen: false,
+};
+
+function shellReducer(
+  state: ShellState, action: ShellAction
+): ShellState {
+  switch (action.type) {
+    case 'showHeader':      return { ...state, header: true };
+    case 'setSideMenu':     return { ...state, showSideMenu: action.show };
+    case 'toggleSearch':
+      return { ...state, isSearchOpen: action.open,
+               isMobileMenuOpen: false };
+    default: throw Error('Unknown: ' + action.type);
+  }
+}</code></pre>
+  </div>
+</div>
+
+<p>What TypeScript now guarantees for you:</p>
+<ul>
+  <li><code>dispatch({ type: 'setSideMenu' })</code> <em>without</em> <code>show</code> is a compile error — the <code>setSideMenu</code> arm requires <code>show: boolean</code>.</li>
+  <li><code>dispatch({ type: 'shoHeader' })</code> (typo!) is a compile error — only the three listed types exist.</li>
+  <li>Inside each <code>case</code>, <code>action</code> is narrowed: <code>action.show</code> exists <em>only</em> in the <code>'setSideMenu'</code> arm. The discriminated union does the narrowing for free.</li>
+  <li>The <code>useReducer</code> return infers <code>dispatch</code> accepting only <code>ShellAction</code> — every consumer gets the check too.</li>
+</ul>
+
+<h2>Set up the migration in demo-react-app</h2>
+<div class="panel react" style="flex:1 1 auto; margin:1.2em 0">
+  <h4><span>Shell</span> &middot; one-time setup steps</h4>
+<pre><code>npm i -D typescript        # @types/react &amp; @types/react-dom already installed
+
+# add tsconfig.json at demo-react-app root (Vite React defaults):
+#   jsx: "react-jsx"          no "import React" needed
+#   moduleResolution: "bundler"
+#   noEmit: true              tsc only checks; Vite still builds
+#   strict: true
+#   allowJs: true             existing .jsx files keep working while you migrate
+</code></pre>
+</div>
+<p>The <code>allowJs: true</code> flag is the hero of an incremental migration: you can rename <code>Pagination.jsx</code> &#8594; <code>Pagination.tsx</code> and type it, while every other file stays <code>.jsx</code> and still runs. Convert <em>one file at a time</em>, type the public boundary (props), and let the compiler tell you every call site that needs updating.</p>
+
+<h2>Why this matters for your mission</h2>
+<p>Australian employer React roles overwhelmingly want TypeScript. But more importantly for <em>you</em>: the port's value is a real app, and the moment this typed contract is in place, your editor catches the exact class of bug that ate hours in an untyped Vue codebase — <code>this.paginationComponentKey = null</code>, a string where a number was expected, a typo'd action type silently ignored by Vuex. "Do you use TypeScript?" is the interview question; "I migrated my React port to TSX, here's the discriminated-union reducer" is the answer.</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the TSX panels above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"What does TSX add to a React component?","o":["checked prop types","smaller bundle","new lifecycle","auto data fetch"],"a":0,"why":"TSX adds a compile-time type checker; bundles and runtime behaviour are unchanged."},
+  {"q":"Which type pairs with the reducer's dispatch?","o":["discriminated union","decorated class","plain object","promise result"],"a":0,"why":"A discriminated union (type: 'showHeader' | 'setSideMenu' ...) is how actions are typed, narrowing payload per case."},
+  {"q":"How is onPage declared in PaginationProps?","o":["onPage: events","onPage: pagenum","onPage: callback","onPage: (p: number) => void"],"a":3,"why":"A function prop is typed as a signature: arguments and return type, here (page: number) => void."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Run the setup: <code>npm i -D typescript</code> in <code>demo-react-app</code>, add the tsconfig shown above (or copy the Vite React template's), then run <code>npx tsc --noEmit</code> — it should pass with only <code>allowJs: true</code> and no <code>.tsx</code> files yet.</li>
+  <li>Rename <code>src/components/Pagination.jsx</code> &#8594; <code>src/components/Pagination.tsx</code> and add the <code>PaginationProps</code> type from this lesson. Run <code>npx tsc --noEmit</code> — now it <em>does</em> check <code>Home.jsx</code>&#39;s usage because the prop type is exported.</li>
+  <li>Deliberately break it: change <code>start={count}</code> to <code>start={"1"}</code> in <code>Home.jsx</code>. Watch <code>tsc</code> name the exact file and line. Then fix it back.</li>
+  <li>Now convert <code>ShellCtxProvider.jsx</code> &#8594; <code>.tsx</code> and add <code>ShellState</code> + the <code>ShellAction</code> discriminated union. Watch <code>ShellTopMenu.jsx</code>&#39;s <code>dispatch({ type: 'setSideMenu', show: ... })</code> start type-checking automatically.</li>
+  <li>Bonus: type the <code>ShellRouteTable.jsx</code> route array as <code>AppRoute[]</code> (see the reference) and watch <code>ShellLayout</code>&#39;s <code>displayLocation === 'topmenu'</code> filter get a compile-time spelling check.</li>
+</ol>
+<p>Leave the rest of the app as <code>.jsx</code> for now — that&#39;s the point. You&#39;ve converted the leaf contract (props), the state logic (reducer), and the data table (routes); the compiler is now your safety net for exactly the three places contracts live.</p>
+
+<h2>Primary source to read</h2>
+<p>The official guides: <a href="https://react.dev/learn/typescript">react.dev &middot; Adding TypeScript to a project</a> (installation + this exact incremental-migration advice) and <a href="https://react.dev/learn/typescript">Using TypeScript with React</a> (prop/state/event typing rules). Skim the TypeScript <a href="https://www.typescriptlang.org/tsconfig">TSConfig reference</a> for <code>jsx</code>, <code>allowJs</code>, and <code>verbatimModuleSyntax</code> — you'll meet those three in every real repo.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0007-jsx-to-tsx.html">JSX &#8594; TSX</a> cheat sheet condenses this lesson — bookmark it. Next lesson: <a href="0008-home-page-with-mock-data.html">the Home page with real layout and mock data</a> — putting the shell, context, and types together into the Home slice from your mission.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If a discriminated union feels different from what you know in C#, or you want the full <code>tsconfig.json</code> written for demo-react-app alongside a walkthrough of each flag, ask me — we work against your actual app and can migrate a whole component together.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

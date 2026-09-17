@@ -1,0 +1,112 @@
+/* =============================================
+   Shell Layout - Full-viewport grid layout
+   =============================================
+   DOM structure (direct children of #root):
+     <header class="shell-header">
+     <div class="topmenu">
+     <div id="shell-body">
+       <div class="sidemenu">   (conditional)
+       <main id="maincontent">
+     <footer class="shell-footer">
+   ============================================= */
+
+/* --- Reset & full-height root --- */
+#root {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- Header: pinned to top --- */
+.shell-header {
+  padding: 10px 20px;
+  background: #1a1a2e;
+  color: #fff;
+  z-index: 10;
+}
+
+/* --- Top Menu: sits directly under header --- */
+.topmenu {
+  background: #16213e;
+  color: #eee;
+  padding: 0 20px;
+  z-index: 9;
+}
+
+.topmenu nav ul {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 4px;
+}
+
+.topmenu nav ul li a {
+  display: block;
+  padding: 10px 16px;
+  color: #ccc;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.topmenu nav ul li a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* --- Shell Body: sidemenu + main side-by-side --- */
+#shell-body {
+  display: flex;
+  /* When sidemenu is rendered, it takes its natural width
+     (flex-shrink: 0) and main fills the remaining space.
+     When sidemenu is absent (returns null), main takes the
+     full width. */
+  overflow: hidden;
+}
+
+/* --- Side Menu --- */
+.sidemenu {
+  background: #0f3460;
+  color: #ccc;
+  padding: 12px 0;
+  overflow-y: auto;
+  min-width: 180px;
+  flex-shrink: 0;
+}
+
+.sidemenu nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidemenu nav ul li a {
+  display: block;
+  padding: 10px 20px;
+  color: #ccc;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidemenu nav ul li a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* --- Main Content Area --- */
+#maincontent {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- Footer: pinned to bottom --- */
+.shell-footer {
+  padding: 10px 20px;
+  background: #1a1a2e;
+  color: #fff;
+  text-align: center;
+  z-index: 10;
+}
