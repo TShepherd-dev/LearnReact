@@ -9,7 +9,7 @@
 <body>
 <div class="body">
 <div class="meta">
-  <strong>ReactJS Reference 06</strong> &middot; Vuex &#8594; React state &middot; <a href="../lessons/0006-state-management.html">Lesson 0006</a>
+  <strong>ReactJS Reference 06</strong> &middot; Vuex &#8594; React state &middot; <a href="../lessons/0006-state-management.html">Lesson 0006</a> &middot; <a href="../lessons/0007-typescript-intro.html">Next</a>
 </div>
 
 <h1>Vuex &#8594; React State Management</h1>
@@ -29,6 +29,7 @@ Vuex is a <strong>single global store outside your component tree</strong> that 
 </table>
 
 <h2>Term-by-term map (module &#8594; reducer + context)</h2>
+<p><strong>Words first:</strong> a <em>reducer</em> is a pure function <code>(state, action) =&gt; newState</code> that "folds" every action the component ever receives into its current state — the <code>Array.reduce</code> idea (C#: an <code>Aggregate</code> fold, or a state-machine transition function). A <em>slice</em> is Redux-Toolkit jargon for one namespaced Vuex module: a self-contained section of state plus the reducer that changes it plus the hooks that read/write it, in one file. One slice per concern.</p>
 <div class="duo">
   <div class="panel vue">
     <h4><span>Vuex</span> &middot; store/shell.js (abridged)</h4>

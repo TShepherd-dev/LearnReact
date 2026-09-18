@@ -29,6 +29,36 @@ Vuex is <strong>one global store outside your components</strong> that everythin
   <li><strong><code>mapState/mapGetters/mapActions/mapMutations</code></strong> &#8594; a hook like <code>useShell()</code></li>
 </ul>
 
+<h2>The words: what is a "reducer"? what is a "slice"?</h2>
+<p>These two names confuse every React learner. Neither is new to you — you've written both patterns in Vue under different names.</p>
+
+<h3>"Reducer" is a fold — it comes from functional programming</h3>
+<p>A reducer is just a pure function <code>(state, action) =&gt; newState</code>. The name comes from <code>Array.reduce</code>, which <em>folds</em> a list into one value:</p>
+<pre><code>// Array.reduce folds a list into one value:
+const total = [1, 2, 3].reduce((sum, n) =&gt; sum + n, 0); // 6
+
+// A state reducer folds ACTIONS into STATE:
+const state = [a1, a2, a3].reduce(shellReducer, initialState);
+//             ^every action the component ever received^
+//             shellReducer(previousState, action) =&gt; newState
+</code></pre>
+<div class="tldr">
+A reducer &ldquo;reduces&rdquo; a whole history of actions into a single current state — same word as &ldquo;fold&rdquo;. In C# terms: an <code>Aggregate</code> over events, or a state-machine transition function: <code>next = current.Transition(command)</code>.
+</div>
+<p>Two properties matter: a reducer is <strong>pure</strong> (same inputs &#8594; same output, no side effects, no API calls — that's what makes it unit-testable in isolation) and it <strong>returns a new state object</strong> instead of mutating (React needs a fresh reference to know something changed and re-render). Compare Vuex: a Vuex mutation mutates <code>state</code> in place inside a magic global; a React reducer returns a new object from a plain function.</p>
+
+<h3>"Slice" is Redux-Toolkit jargon for a namespaced Vuex module</h3>
+<p>&ldquo;Slice&rdquo; comes from Redux Toolkit (the 2026 enterprise store). Picture the whole state tree cut into &ldquo;slices&rdquo; — each one a self-contained section that owns its own state, its own transition functions (reducers), and its own action types. That is <em>exactly</em> your <code>namespaced: true</code> Vuex module:</p>
+<table>
+<tr><th>Vuex (you know this)</th><th>React / Redux-Toolkit jargon</th><th>This lesson's name</th></tr>
+<tr><td><code>namespaced: true</code> module</td><td>slice</td><td>context slice (one file)</td></tr>
+<tr><td>module <code>state</code></td><td>slice state / <code>initialState</code></td><td><code>initialShellState</code></td></tr>
+<tr><td><code>mutations</code></td><td>reducers</td><td><code>shellReducer</code> cases</td></tr>
+<tr><td>mutation name strings</td><td>action types (e.g. <code>'setSideMenu'</code>)</td><td><code>action.type</code></td></tr>
+<tr><td>module <code>actions</code> (orchestration)</td><td>thunks / async creators</td><td>functions in the provider</td></tr>
+</table>
+<p>So in this React-without-Redux lesson, a &ldquo;slice&rdquo; just means: <strong>one area of state, bundled with the reducer that changes it and the hooks that read/write it, in one file</strong>. One slice per concern — shell state, account state, catalogue state&hellip; — exactly like one namespaced Vuex module per concern. (With Redux Toolkit you literally call a function <code>createSlice({...})</code>; the vocabulary is identical.)</p>
+
 <h2>Read the real file</h2>
 <p>Open <code>src/store/shell.js</code> — a tiny, self-contained, <code>namespaced: true</code> module. It owns shell UI state: <code>header</code>, <code>footer</code>, <code>isMobileMenuOpen</code>, <code>isProfileDropdownOpen</code>, <code>isSearchOpen</code>, <code>notificationCount</code>. And a single async action, <code>getUnreadCounts</code>, which calls <code>api.get(...)</code> then commits counts.</p>
 

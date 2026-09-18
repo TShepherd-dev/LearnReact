@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",            // modern JS output target
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],   // browser + JS types available
+    "module": "ESNext",            // ESM modules (Vite)
+    "moduleResolution": "bundler", // how imports resolve (Vite/bundler style)
+    "jsx": "react-jsx",            // automatic JSX runtime — no "import React"
+    "noEmit": true,                // tsc only checks; Vite still does the build
+    "strict": true,                // all strict checks on (you want this)
+    "allowJs": true,               // existing .jsx files still compile
+    "skipLibCheck": true,          // skip checking .d.ts inside node_modules
+    "types": ["vite/client"],      // Vite env types (import.meta.env)
+    "isolatedModules": true,       // per-file transpile safety (Vite requirement)
+    "verbatimModuleSyntax": true   // type-only imports must use "import type"
+  },
+  "include": ["src"]
+}

@@ -22,6 +22,14 @@
 
 <p>TypeScript does not change React. It changes <em>when</em> you find out you got a contract wrong: from a confusing runtime <code>undefined</code> in the browser to a red squiggle and a <code>tsc</code> error in the editor.</p>
 
+<h3>What TSX adds — and what it never changes</h3>
+<ul>
+  <li><strong>Adds:</strong> type annotations on props, state, variables, function signatures, exports. Your editor shows the expected shape; wrong usage becomes a compile error.</li>
+  <li><strong>Adds:</strong> type-only imports (<code>import type</code>) for types that don't exist at runtime.</li>
+  <li><strong>Does not change:</strong> the bundle size, the rendering, the lifecycle, or how the app behaves. Types are erased at build time.</li>
+  <li><strong>Does not add:</strong> data fetching, routing, or any new capability. It only <em>checks</em> the code you already wrote.</li>
+</ul>
+
 <h2>Read the real file — Pagination.jsx</h2>
 <p>Open <code>demo-react-app/src/components/Pagination.jsx</code> (which we translated from the source <code>pagination.vue</code> back in lesson 0003). It declares four props by destructuring:</p>
 <div class="panel react" style="flex:1 1 auto; margin:1.2em 0">
@@ -85,12 +93,12 @@ export default function Pagination(
 <p>Read the C# in it:</p>
 <ul>
   <li><strong><code>type PaginationProps = {...}</code></strong> — a property contract, like a record/interface. <code>&lt;Pagination total="one-hundred" /&gt;</code> no longer compiles.</li>
-  <li><strong><code>(page: number) =&gt; void</code></strong> — <code>onPage</code> takes exactly a number and returns nothing. This is the killer: a callback that's typed catches the mistake <em>at the call site</em>, in the parent, along with the message "Type 'string' is not assignable to type 'number'".</li>
+  <li><strong><code>(page: number) =&gt; void</code></strong> — how a <em>function prop</em> is typed: write the function's argument list and return type in brackets, then <code>=&gt; void</code>. <code>onPage</code> takes exactly a number and returns nothing. This is the killer: a callback that's typed catches the mistake <em>at the call site</em>, in the parent, along with the message "Type 'string' is not assignable to type 'number'".</li>
   <li><strong>Same runtime code</strong> — the type annotations are stripped at build time. The browser runs identical JavaScript.</li>
 </ul>
 
 <h2>Type the state and the reducer too</h2>
-<p>Now the shell context you built in lesson 0006 — <code>ShellCtxProvider.jsx</code>. In JSX, <code>shellReducer</code> accepts <em>any</em> action object and returns anything. Type it with a <strong>discriminated union</strong> (your C#-brain already knows this as a tagged type / F# union):</p>
+<p>Now the shell context you built in lesson 0006 — <code>ShellCtxProvider.jsx</code>. In JSX, <code>shellReducer</code> accepts <em>any</em> action object and returns anything. To type the actions, React and TypeScript use a <strong>discriminated union</strong>:</p>
 <div class="duo">
   <div class="panel vue">
     <h4><span>JSX</span> &middot; ShellCtxProvider.jsx (before)</h4>
@@ -145,6 +153,20 @@ function shellReducer(
   </div>
 </div>
 
+<h3>What "discriminated union" means, plainly</h3>
+<p>A union is a type that can be <em>one of several shapes</em> — the C# equivalent is a collection of records, or an F# union, where each option is a distinct object type. "Discriminated" means there is a field you can look at to tell which shape you're holding. Here that field is <code>type</code>, and each member lists its own extra fields:</p>
+<table>
+<tr><th>Action value</th><th>Allowed extra fields</th><th>Example that compiles</th></tr>
+<tr><td><code>{ type: 'showHeader' }</code></td><td>none</td><td><code>dispatch({ type: 'showHeader' })</code></td></tr>
+<tr><td><code>{ type: 'setSideMenu' }</code></td><td>must include <code>show: boolean</code></td><td><code>dispatch({ type: 'setSideMenu', show: true })</code></td></tr>
+<tr><td><code>{ type: 'toggleSearch' }</code></td><td>must include <code>open: boolean</code></td><td><code>dispatch({ type: 'toggleSearch', open: false })</code></td></tr>
+</table>
+
+<p>This is what the <code>switch</code> relies on. Inside the <code>case 'setSideMenu':</code> arm, TypeScript <em>narrows</em> <code>action</code> to just that member — so <code>action.show</code> is typed <code>boolean</code> there, and <code>action.show</code> <em>inside a different case</em> is a compile error (that shape doesn't have it). The union type is what you hook up to <code>useReducer</code>:</p>
+<pre><code>const [state, dispatch] = useReducer(shellReducer, initialShellState);
+// dispatch only accepts ShellAction — every consumer is checked too.
+</code></pre>
+
 <p>What TypeScript now guarantees for you:</p>
 <ul>
   <li><code>dispatch({ type: 'setSideMenu' })</code> <em>without</em> <code>show</code> is a compile error — the <code>setSideMenu</code> arm requires <code>show: boolean</code>.</li>
@@ -153,19 +175,73 @@ function shellReducer(
   <li>The <code>useReducer</code> return infers <code>dispatch</code> accepting only <code>ShellAction</code> — every consumer gets the check too.</li>
 </ul>
 
-<h2>Set up the migration in demo-react-app</h2>
-<div class="panel react" style="flex:1 1 auto; margin:1.2em 0">
-  <h4><span>Shell</span> &middot; one-time setup steps</h4>
-<pre><code>npm i -D typescript        # @types/react &amp; @types/react-dom already installed
+<h3>How many unions? Where do they live?</h3>
+<p>The honest scale: <strong>one union per reducer — not per app, not per component.</strong> A union is just a <em>type</em> written in a file; you export it and import it wherever that reducer's <code>dispatch</code> is used. Think of an app as a set of state slices (the Vuex modules you know: shell, account, catalogue, myTraining&hellip;). Each slice that uses <code>useReducer</code> owns one <code>State</code> type and one <code>Action</code> union:</p>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Slice</span> &middot; Shell context (this lesson)</h4>
+<pre><code>type ShellState = { header: boolean; ... };
+type ShellAction =
+  | { type: 'showHeader' }
+  | { type: 'setSideMenu'; show: boolean }
+  | { type: 'toggleSearch'; open: boolean };
+// useReducer(shellReducer, initialShellState)</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>Slice</span> &middot; A second context (example)</h4>
+<pre><code>type AccountState = { user: User | null; ... };
+type AccountAction =
+  | { type: 'setUser'; user: User }
+  | { type: 'logout' };
+// a SEPARATE union for a SEPARATE
+// reducer/slice. Two slices, two unions.</code></pre>
+  </div>
+</div>
+<p>The two panels are not connected — that's the point. Only the messages that concern <em>one reducer</em> belong in its union. If you later find two reducers need identical actions, that's a signal to lift the shared slice up (one parent reducer) rather than duplicate the vocabulary.</p>
+<p>Components don't "own" unions, they <em>consume</em> them. A component calls <code>dispatch</code> with a member of <code>ShellAction</code>, or receives a <code>User</code> typed via a slice's <code>State</code>. The union is the contract between the reducer and every dispatcher.</p>
 
-# add tsconfig.json at demo-react-app root (Vite React defaults):
-#   jsx: "react-jsx"          no "import React" needed
-#   moduleResolution: "bundler"
-#   noEmit: true              tsc only checks; Vite still builds
-#   strict: true
-#   allowJs: true             existing .jsx files keep working while you migrate
+<h3>What the union is really <em>for</em></h3>
+<p>Three jobs, in order of importance:</p>
+<ol>
+  <li><strong>A closed vocabulary of messages.</strong> It answers "what are all the ways this slice's state can change?" — the same question Vuex answers by convention with mutation/action name strings, but now the compiler knows the full list. Veto a typo before runtime.</li>
+  <li><strong>Payload per message.</strong> Each member declares its own fields. <code>setSideMenu</code> <em>requires</em> <code>show</code>; <code>showHeader</code> can't have random extra data slip in.</li>
+  <li><strong>Exhaustiveness.</strong> Add a new member to the union and TypeScript flags every <code>switch</code> missing a <code>case</code> for it. This is how a new action retrofits every reducer — instead of hunting string literals.</li>
+</ol>
+
+<h2>How to migrate the Vue code to React, with types</h2>
+<p>The Vue source has no type safety anywhere — Vue 2 + plain JS, like your <code>demo-react-app</code> at this moment. So the "migration with types" is not one big rewrite; it's a sequence of tiny, verifiable steps. Do them in this exact order:</p>
+<ol>
+  <li><strong>Install the compiler.</strong> In <code>demo-react-app</code>: <code>npm i -D typescript</code>. (The React type packages <code>@types/react</code> and <code>@types/react-dom</code> are already installed in this project.)</li>
+  <li><strong>Add the tsconfig.</strong> Create <code>demo-react-app/tsconfig.json</code> at the project root with the settings below. These are the Vite React template defaults, explained inline.</li>
+  <li><strong>Prove the check runs.</strong> Run <code>npx tsc --noEmit</code>. With only <code>.jsx</code> files and <code>allowJs: true</code>, it should pass with no errors — this is your baseline.</li>
+  <li><strong>Convert the leaf contract first.</strong> Rename <code>src/components/Pagination.jsx</code> &#8594; <code>src/components/Pagination.tsx</code> and add the <code>PaginationProps</code> type. Because the component previously had <em>no</em> type, TypeScript now reports any mismatch at every call site — including inside <code>Home.jsx</code>, which passes <code>start={count}</code> where <code>count</code> is a <code>number</code>. Run <code>npx tsc --noEmit</code> again.</li>
+  <li><strong>Type the state logic.</strong> Rename <code>ShellCtxProvider.jsx</code> &#8594; <code>ShellCtxProvider.tsx</code>, add <code>ShellState</code> and <code>ShellAction</code> from this lesson. Now <code>ShellTopMenu.jsx</code>&#8217;s <code>dispatch({ type: 'setSideMenu', show: ... })</code> is checked automatically. Run <code>tsc</code> again.</li>
+  <li><strong>Type the route table.</strong> Rename <code>ShellRouteTable.jsx</code> &#8594; <code>ShellRouteTable.tsx</code> and type the array as <code>AppRoute[]</code> (see the reference). Now <code>ShellLayout</code>&#8217;s <code>displayLocation === 'topmenu'</code> filter is spelled checked. Run <code>tsc</code> one final time.</li>
+  <li><strong>Stop.</strong> Leave every other file as <code>.jsx</code>. You have converted the three places contracts live — component props, reducer actions, and the route data — and the rest of the app still runs. Convert more later, one file at a time, whenever you touch them.</li>
+</ol>
+
+<div class="panel react" style="flex:1 1 auto; margin:1.2em 0">
+  <h4><span>Shell</span> &middot; tsconfig.json (Vite React defaults, annotated)</h4>
+<pre><code>{
+  "compilerOptions": {
+    "target": "ES2022",            // modern JS output target
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],   // browser + JS types available
+    "module": "ESNext",            // ESM modules (Vite)
+    "moduleResolution": "bundler", // how imports resolve (Vite/bundler style)
+    "jsx": "react-jsx",            // automatic JSX runtime — no "import React"
+    "noEmit": true,                // tsc only checks; Vite still does the build
+    "strict": true,                // all strict checks on (you want this)
+    "allowJs": true,               // existing .jsx files still compile
+    "skipLibCheck": true,          // skip checking .d.ts inside node_modules
+    "types": ["vite/client"],      // Vite env types (import.meta.env)
+    "isolatedModules": true,       // per-file transpile safety (Vite requirement)
+    "verbatimModuleSyntax": true   // type-only imports must use "import type"
+  },
+  "include": ["src"]
+}
 </code></pre>
 </div>
+
 <p>The <code>allowJs: true</code> flag is the hero of an incremental migration: you can rename <code>Pagination.jsx</code> &#8594; <code>Pagination.tsx</code> and type it, while every other file stays <code>.jsx</code> and still runs. Convert <em>one file at a time</em>, type the public boundary (props), and let the compiler tell you every call site that needs updating.</p>
 
 <h2>Why this matters for your mission</h2>
@@ -174,9 +250,9 @@ function shellReducer(
 <h2>Practice — retrieve, don't peek</h2>
 <p>Cover the TSX panels above, then answer. Immediate feedback; one line each.</p>
 <div class="quiz" data-quiz='[
-  {"q":"What does TSX add to a React component?","o":["checked prop types","smaller bundle","new lifecycle","auto data fetch"],"a":0,"why":"TSX adds a compile-time type checker; bundles and runtime behaviour are unchanged."},
-  {"q":"Which type pairs with the reducer's dispatch?","o":["discriminated union","decorated class","plain object","promise result"],"a":0,"why":"A discriminated union (type: 'showHeader' | 'setSideMenu' ...) is how actions are typed, narrowing payload per case."},
-  {"q":"How is onPage declared in PaginationProps?","o":["onPage: events","onPage: pagenum","onPage: callback","onPage: (p: number) => void"],"a":3,"why":"A function prop is typed as a signature: arguments and return type, here (page: number) => void."}
+  {"q":"What does TSX add to a React component?","o":["checked prop types","smaller bundle","new lifecycle","auto data fetch"],"a":0,"why":"TSX adds a compile-time type checker: prop/state/dispatch shapes are verified before runtime. Bundles, lifecycle and behaviour are unchanged."},
+  {"q":"Which type pairs with the reducer&#39;s dispatch?","o":["discriminated union","decorated class","plain object","promise result"],"a":0,"why":"Actions are typed as a discriminated union (each {type} member carries its own payload fields); useReducer&#39;s dispatch then only accepts it."},
+  {"q":"How is onPage declared in PaginationProps?","o":["onPage: events","onPage: pagenum","onPage: callback","onPage: (p: number) =&gt; void"],"a":3,"why":"A function prop is typed as a signature: arguments and return type, here (page: number) =&gt; void, meaning it takes a number and returns nothing."}
 ]'></div>
 
 <h2>Do it in the real workspace</h2>

@@ -9,7 +9,7 @@
 <body>
 <div class="body">
 <div class="meta">
-  <strong>ReactJS Reference 07</strong> &middot; JSX &#8594; TSX &middot; <a href="../lessons/0007-typescript-intro.html">Lesson 0007</a>
+  <strong>ReactJS Reference 07</strong> &middot; JSX &#8594; TSX &middot; <a href="../lessons/0007-typescript-intro.html">Lesson 0007</a> &middot; <a href="../lessons/0008-home-page-with-mock-data.html">Next</a>
 </div>
 
 <h1>JSX &#8594; TSX: types define the component contract</h1>
@@ -129,6 +129,7 @@ function shellReducer(state: ShellState, action: ShellAction): ShellState {
 </div>
 
 <p>The <strong>discriminated union</strong> <code>ShellAction</code> is the C#-equivalent of typing each action — <code>action.type</code> pins which payload fields exist, so <code>action.show</code> inside the <code>'setSideMenu'</code> case is typed, and a typo like <code>'showHeadder'</code> is a compile error. <code>useReducer(shellReducer, initialShellState)</code> then infers <code>dispatch</code> to only accept valid actions.</p>
+<p><strong>Scope:</strong> one union per reducer (one per state slice/context) — not one per app, not per component. It is just a type in a file; export it and import it where that reducer's <code>dispatch</code> is used. Two slices = two unions. Components don't own unions, they consume them (calling <code>dispatch</code> with a union member, or reading slice <code>State</code> via a hook). The union's three jobs: a closed vocabulary of messages for the slice, per-message payload typing, and exhaustiveness (a new member flags every <code>switch</code> missing a <code>case</code>).</p>
 
 <h2>Typing the route table</h2>
 <div class="duo">
