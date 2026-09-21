@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Page data states — loading, empty, error, retry</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 09</strong> &middot; Page state &amp; loading &middot; <a href="../lessons/0009-page-state-and-loading.html">Lesson 0009</a>
+</div>
+
+<h1>Page data states: loading, empty, error, retry</h1>
+<p>How the Vue page&rsquo;s <em>store</em> loading flag and the app&rsquo;s <em>global</em> axios error interceptor become states the <strong>React page owns itself</strong>. Read Lesson 0009 first; this is the quick-reference.</p>
+
+<h2>The four states a data-fed page can be in</h2>
+<table>
+<tr><th>State</th><th>Trigger</th><th>What the user sees</th></tr>
+<tr><td><strong>Loading</strong></td><td>request started, not finished</td><td>spinner / skeleton / &ldquo;Loading&hellip;&rdquo;</td></tr>
+<tr><td><strong>Success</strong></td><td>promise resolved with data</td><td>the real content</td></tr>
+<tr><td><strong>Empty</strong></td><td>resolved, but zero records</td><td>friendly &ldquo;nothing here yet&rdquo; message</td></tr>
+<tr><td><strong>Error</strong></td><td>promise rejected</td><td>error message + Retry button</td></tr>
+</table>
+
+<h2>Vue vs React: where error handling lives</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; the source app</h4>
+<pre><code>// store: loading flag lives in Vuex
+getMetrics({ commit }) {
+  commit('setMetricsLoading', true);
+  return api.get('api/user/getMetrics').then((data) =&gt; {
+    if (data.Output) commit('setMetrics', data.Output);
+  });
+  // no .catch — the page never sees a failure
+}
+
+// axios.config.js: errors surface GLOBALLY
+// 500 -> safeShowGrowlMessage('warning',
+//   'An application error occurred...')
+// 401 -> silent retry after 2s</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; the ported page</h4>
+<pre><code>const [payload, setPayload] = useState(null);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState(null);
+
+const load = () =&gt; {
+  setIsLoading(true); setError(null);
+  mockHome()
+    .then(setPayload)
+    .catch((err) =&gt; setError(err))
+    .finally(() =&gt; setIsLoading(false));
+};
+useEffect(() =&gt; { load(); }, []);
+
+if (isLoading) return &lt;p&gt;Loading&hellip;&lt;/p&gt;;
+if (error) return (
+  &lt;p&gt;Something went wrong.&lt;/p&gt;
+  &lt;button onClick={load}&gt;Retry&lt;/button&gt;
+);
+if (!payload.whatsHotModules.length) {
+  return &lt;p&gt;No content yet.&lt;/p&gt;;
+}</code></pre>
+  </div>
+</div>
+
+<p>The Vue app routes every failure through one central interceptor, so the page stays dumb. React hands the failure back to the page as a rejected promise, and the page decides what to render — including the Retry button.</p>
+
+<h2>The mock contract, extended</h2>
+<blockquote>
+The mock mimics the <strong>real API&rsquo;s contract</strong> — not just its happy path. If the real endpoint can fail, the mock must be able to reject too, or the error and retry branches are untested fiction. (Source: Lesson 0008&rsquo;s golden rule — &ldquo;the component should not know whether the data came from a file or a server&rdquo; — extended to failure.)
+</blockquote>
+
+<pre><code>export const mockHome = (opts) =&gt;
+  new Promise((resolve, reject) =&gt; {
+    setTimeout(() =&gt; {
+      if (opts &amp;&amp; opts.fail) {
+        reject(new Error('network down'));
+        return;
+      }
+      resolve({ /* same shape as the real API */ });
+    }, 400);
+  });</code></pre>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue 2 (source app)</th><th>React (ported page)</th><th>Notes</th></tr>
+<tr><td><code>isMetricsLoading</code> store flag + <code>v-if</code> temporary block</td><td><code>useState(isLoading)</code> + early return in the page</td><td>Loading is just one of the page&rsquo;s states.</td></tr>
+<tr><td>axios interceptor shows a global growl on 500</td><td><code>.catch((err) =&gt; setError(err))</code> on the page&rsquo;s own promise</td><td>Error is a value the page holds and renders, not a side effect fired elsewhere.</td></tr>
+<tr><td>interceptor silently retries a 401 after 2s</td><td>Retry button calls the same <code>load</code> function</td><td>Retry = re-invoke the load; no framework involvement.</td></tr>
+<tr><td><code>v-for</code> over an empty array renders nothing</td><td>explicit empty-state branch before the list</td><td>React has no empty behaviour — you must render the &ldquo;nothing here yet&rdquo; message.</td></tr>
+<tr><td><code>api.get(...)</code> promise</td><td>mock promise (must resolve <em>and</em> reject)</td><td>Keep the shape; swap the import to go live.</td></tr>
+</table>
+
+<h2>Rules to remember</h2>
+<ul>
+  <li>One page, one load function. The effect calls it; the Retry button calls it. Never write the fetch twice.</li>
+  <li>Order the early returns: loading first, then error, then empty, then content.</li>
+  <li>Resetting: at the start of <code>load</code>, clear <code>error</code> so a retry doesn&rsquo;t keep showing the stale message.</li>
+  <li>Production note: for real server data at scale you reach for TanStack Query&rsquo;s <code>useQuery</code>, which bakes in all four states — but the state-machine understanding is the same. (react.dev: don&rsquo;t hand-roll fetching in shipped apps; lesson 0006&rsquo;s server-state split.)</li>
+</ul>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0009 &middot; Page state &amp; loading: empty, error, retry</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 09</strong> &middot; Page State &amp; Loading &middot; <a href="../reference/0009-page-state-loading.html">Reference</a> &middot; <a href="../lessons/0008-home-page-with-mock-data.html">Lesson 08</a>
+</div>
+
+<h1>Page state &amp; loading: empty, error, retry</h1>
+<p>Lesson 0008 built the Home page's happy path: <code>useEffect</code> calls <code>mockHome()</code>, the promise resolves, widgets get props. Today we finish the job — everything that happens <strong>when the promise doesn't cooperate</strong>. By the end you'll have a page that can sit in any of four states: loading, success, empty, or error-with-retry.</p>
+
+<h2>Recall first (from Lesson 0008)</h2>
+<p>Before we add the error path, re-retrieve the punchline you met on the mock contract:</p>
+<details>
+  <summary>Why does the mock have to match the real API's shape exactly?</summary>
+  <p class="tldr">So the component never knows the data came from a file — going live later is a one-line <strong>import swap</strong>, not a rewrite. Lesson 0008 built the shape-match; today we extend that honesty to failure.</p>
+</details>
+
+<h2>The one idea</h2>
+<blockquote>
+A React page that loads data owns <strong>four states</strong> — loading, success, empty, error — and they all flow from <strong>one function it can call again</strong>. Retry isn't a navigation or a plugin; it's just calling that function once more. (<a href="https://react.dev/learn/synchronizing-with-effects">react.dev &middot; Synchronizing with Effects</a>)
+</blockquote>
+
+<h2>Read the real file</h2>
+<p>Open <code>src/store/account.js</code> in the source app and find <code>getMetrics</code>:</p>
+<pre><code>getMetrics({ commit }) {
+  commit('setMetricsLoading', true);
+  return api.get('api/user/getMetrics').then((data) =&gt; {
+    if (data.Output) commit('setMetrics', data.Output);
+  });
+  // notice: NO .catch
+}</code></pre>
+<p>and <code>src/api/axios.config.js</code> — the response interceptor:</p>
+<pre><code>// on HTTP 500:
+safeShowGrowlMessage('warning',
+  'An application error occurred - please refresh...');
+// on HTTP 401:
+//  silently retry the same request after 2 seconds
+return new Promise((resolve, reject) =&gt; {
+  setTimeout(() =&gt; { resolve(axios(error.config)); }, 2000);
+});</code></pre>
+<p>Spot the pattern: <strong>in Vue, the page never sees its own failure.</strong> The store commits a loading flag and returns; if the request fails, the axios interceptor catches it centrally — a growl banner here, a silent 401 retry there. Per-page error state simply doesn't exist, because the framework route is the interceptor.</p>
+
+<h2>The shift</h2>
+<p>React has no central interceptor by default. A rejected promise comes <strong>back to the page that created it</strong>, and the page decides what to render. The Vue code kept loading in the store and failure in the interceptor; the React page keeps <em>all four states in local state</em>.</p>
+
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; the source app</h4>
+<pre><code>created() {
+  this.getMetrics();
+}
+// template temporarily hides content:
+v-if="!isMetricsLoading"
+// failure handled far away, in the
+// axios interceptor (growl + 401 retry)</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Home.jsx (ported)</h4>
+<pre><code>const [payload, setPayload] = useState(null);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState(null);
+
+const load = () =&gt; {
+  setIsLoading(true);
+  setError(null);
+  mockHome()
+    .then(setPayload)
+    .catch(setError)
+    .finally(() =&gt; setIsLoading(false));
+};
+useEffect(() =&gt; { load(); }, []);
+
+if (isLoading) return &lt;p&gt;Loading&hellip;&lt;/p&gt;;
+if (error) return (
+  &lt;div&gt;
+    &lt;p&gt;Something went wrong.&lt;/p&gt;
+    &lt;button onClick={load}&gt;Retry&lt;/button&gt;
+  &lt;/div&gt;
+);
+if (!payload.whatsHotModules.length) return (
+  &lt;p&gt;No "what's hot" modules yet.&lt;/p&gt;
+);
+return ( /* the widgets, as before */ );</code></pre>
+  </div>
+</div>
+
+<p>Three habits worth naming:</p>
+<ul>
+  <li><strong>One <code>load</code> function.</strong> The effect calls it on mount; the Retry button calls it on click. The fetch exists once, not twice — that's all retry is.</li>
+  <li><strong>Reset before you ask.</strong> <code>load</code> starts by clearing <code>error</code> and setting <code>isLoading</code> true, so a retry shows Loading again, not the stale error.</li>
+  <li><strong>The early-return order.</strong> Loading &rarr; Error &rarr; Empty &rarr; Content. Each state is a <code>return</code> that ends the render before the next branch.</li>
+</ul>
+
+<h2>The mock must be able to fail</h2>
+<p>Look at your <code>src/mock/api.js</code>: <code>mockHome</code> can only <code>resolve</code>. If it can never reject, the error and retry branches you just wrote are <em>dead code</em> — fiction you can't test. The golden rule from Lesson 0008 extends: <strong>the mock fulfills the same contract as the real API, including failure.</strong></p>
+
+<pre><code>export const mockHome = (opts) =&gt;
+  new Promise((resolve, reject) =&gt; {
+    setTimeout(() =&gt; {
+      if (opts &amp;&amp; opts.fail) {
+        reject(new Error('network down'));
+        return;
+      }
+      resolve({ /* the same shape as before */ });
+    }, 400);
+  });</code></pre>
+
+<p>Now you can prove the error path exists: call <code>mockHome({ fail: true })</code> and watch the Retry button appear — exactly the code your future deploy-time self will thank you for.</p>
+
+<h2>Why this matters for your mission</h2>
+<p>The app shell and Home screen you're porting are the visible slice — and every subsequent slice (My Training, Search, Catalogue) loads data the same way. Empty states are a real UX deliverable interviewers probe, and the &ldquo;who owns the failure?&rdquo; question is a classic React-vs-Vue-mental-model discussion.</p>
+<p>One honest caveat, per Lesson 0006: production React apps usually don't hand-roll this in an effect — TanStack Query's <code>useQuery</code> gives you loading/empty/error/retry out of the box. But the <em>states</em> are the same; you're learning the machine before switching to one that drives it for you. (react.dev warns against hand-rolled fetching in shipped apps — we do it here precisely because it's the clearest way to see the machine.)</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the React panel above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"Building the mock well means going live later is mostly","o":["a full page rewrite","a one-line import swap","a second new codebase","a backend build job"],"a":1,"why":"The mock returns the real API shape, so the component never knows the difference - you swap one import line."},
+  {"q":"In React, how does a failed load reach the page code?","o":["via a global growl","a store commit call","as a rejected promise","the router refetch"],"a":2,"why":"load() returns a promise; a failure rejects it and the .catch handler sets error state - no central interceptor needed."},
+  {"q":"Why does the Retry button call the same load() as the effect?","o":["it resets all state","it clears the error","one fetch one place","it avoids effects"],"a":2,"why":"Both the effect and the button run the one load(): state rolls back to loading, then succeeds or fails - retry is just running the fetch again."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Open <code>src/mock/api.js</code> and add the <code>opts.fail</code> branch (reject after the same 400ms delay).</li>
+  <li>Rewrite <code>src/views/frontend/Home/Home.jsx</code> with the <code>load()</code> function, the three <code>useState</code> values, and the loading/error/empty/content early-returns shown above.</li>
+  <li>Temporarily change the call to <code>mockHome({ fail: true })</code>, run <code>npm run dev</code>, and confirm you see the error + Retry button. Retry it with <code>fail: false</code> and confirm it recovers.</li>
+  <li>Now make the failure realistic: import <code>mockHome</code> normally, but add a way to trigger failure at runtime (a checkbox that lives in your test file or a hash <code>#fail</code> you read in <code>load</code>) — the point is a button on the page that makes the next load fail, so you never have to edit source to demo the error state.</li>
+</ol>
+<p>Struggling? The full 4-state <code>Home.jsx</code> is one screen up in the React panel — the point is that you could rebuild it from those three habits, not that you memorise the lines.</p>
+
+<h2>Primary source to read</h2>
+<p><a href="https://react.dev/learn/synchronizing-with-effects">Synchronizing with Effects</a> on react.dev — read the &ldquo;interactions and effects are different things&rdquo; section once, and the closing section on how production data-fetching frameworks (including TanStack Query) replace hand-rolled effects.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0009-page-state-loading.html">page data states</a> cheat sheet compresses this lesson — bookmark it next to Reference 08. The next lesson builds on this state machine as the port moves onto the next slice of the app; it'll be scoped when we see how this one lands.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If the gap between &ldquo;hand-rolled effect&rdquo; and &ldquo;TanStack Query&rdquo; is fuzzy, ask me to show the exact <code>useQuery</code> replacement for this Home page, or to walk the axios 401-retry interceptor translated into a React Retry button line by line.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
