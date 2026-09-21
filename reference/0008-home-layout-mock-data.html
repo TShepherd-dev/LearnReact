@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Home page layout + mock data contract</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 08</strong> &middot; Home page layout + mock data &middot; <a href="../lessons/0008-home-page-with-mock-data.html">Lesson 0008</a> &middot; <a href="../lessons/0009-page-state-and-loading.html">Next</a>
+</div>
+
+<h1>Home Page Layout + the Mock Data Contract</h1>
+<p>How the Vue 2 Home page (&ldquo;read from the store, render a stack of widget components&rdquo;) becomes a React page that <strong>loads a mock data module and distributes it to child components via props</strong>. Read Lesson 0008 first; this is the quick-reference.</p>
+
+<h2>The mental model</h2>
+<blockquote>
+In Vue, a page pulls data from a <strong>global store</strong> (<code>this.$store</code> / map-helpers). In React, a page <strong>owns its loading</strong>: a <code>useEffect</code> fetches, local state holds the result, and the page <em>passes that data down</em> to child widgets as props. Mock data is just a function that resolves to the same shape the real API would — so swapping it for the real fetch later is a one-line change.
+</blockquote>
+
+<h2>Where the real file reads data</h2>
+<p>In the source app, <code>src/views/Home.vue</code> declares its needs up front:</p>
+<ul>
+  <li><code>...mapGetters("account", ["getCurrentUser", "isManager"])</code></li>
+  <li><code>...mapState("account", ["metrics", "isMetricsLoading"])</code></li>
+  <li><code>...mapState("catalogue", ["parentTags", "isParentTagLoading"])</code></li>
+  <li><code>...mapActions("account", ["getMetrics"])</code> — triggers the API call</li>
+</ul>
+<p>The page template is then a stack of widget components (<code>userWelcome</code>, <code>teamWelcome</code>, sliders, &ldquo;what&rsquo;s hot&rdquo; tabs) plus local buttons that flip <code>popularContentIsActive</code> / <code>newReleasesIsActive</code>.</p>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue 2 (Home.vue)</th><th>React</th><th>Notes</th></tr>
+<tr><td><code>mapGetters / mapState</code></td><td>props passed down from Home</td><td>Widget children no longer reach into a store; the page hands them the data.</td></tr>
+<tr><td><code>mapActions("account", ["getMetrics"])</code></td><td><code>useEffect(() =&gt; { loadMetrics() }, [])</code></td><td>The effect is the &ldquo;load on mount&rdquo;. Same shape as Lesson 02.</td></tr>
+<tr><td>action calling <code>api.get(&#39;api/user/getMetrics&#39;)</code></td><td><code>fetchMock.Home()</code> returning a <code>Promise</code></td><td>Mock replaces the transport, <em>not</em> the contract — same resolved shape.</td></tr>
+<tr><td><code>isMetricsLoading</code></td><td><code>const [isLoading, setIsLoading] = useState(true)</code></td><td>Flip to <code>false</code> when the promise resolves.</td></tr>
+<tr><td><code>metrics</code> (plain object)</td><td><code>const [metrics, setMetrics] = useState(null)</code></td><td>Holds the resolved mock payload; render guards on <code>isLoading</code>.</td></tr>
+<tr><td><code>metrics.PlanCategoryProgress.find(...)</code></td><td>same <code>Array.prototype.find</code> in a plain function</td><td>Derivation stays JS — no store re-render needed.</td></tr>
+<tr><td><code>getCurrentUser / isManager</code> (store)</td><td>part of the mock payload, held in one <code>useState</code></td><td>One payload object models the API response.</td></tr>
+<tr><td><code>v-for</code> over <code>parentTags</code></td><td><code>{parentTags.map(t =&gt; &lt;Tag /&gt;)}</code></td><td>Lesson 01 pattern.</td></tr>
+<tr><td><code>@click=&quot;activateNewReleases&quot;</code> methods</td><td><code>setNewReleasesIsActive</code> / <code>setPopularContentIsActive</code></td><td>Lesson 01 pattern.</td></tr>
+</table>
+
+<h2>The mock data contract (the golden rule)</h2>
+<div class="tldr">
+Write the mock to return <strong>exactly the shape the real API returns</strong>. The component should not know whether the data came from a file or a server. Swap = change one import.
+</div>
+<pre><code>// mock/api.js  — same shape as the real /api/user/getMetrics
+export const mockHome = () =&gt;
+  new Promise((resolve) =&gt; {
+    setTimeout(() =&gt; {
+      resolve({
+        user: { firstName: "Tim", lastName: "Shepherd", isManager: true },
+        metrics: {
+          TotalModulesTaken: 12,
+          TotalHoursTrained: 26,
+          PlanCategoryProgress: [
+            { PlanCategory: "compliance",     PlanCategoryProgressPercent: 60 },
+            { PlanCategory: "trainingPlan",   PlanCategoryProgressPercent: 40 }
+          ]
+        },
+        parentTags: ["Compliance", "Leadership", "Safety"]
+      });
+    }, 400); // pretend network latency
+});</code></pre>
+<pre><code>// components/Home.jsx — the page owns loading, then distributes
+export default function Home() {
+  const [payload, setPayload] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() =&gt; {
+    mockHome().then((data) =&gt; {
+      setPayload(data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  if (isLoading) return &lt;p&gt;Loading…&lt;/p&gt;;
+
+  return (
+    &lt;main&gt;
+      &lt;UserWelcome user={payload.user} metrics={payload.metrics} /&gt;
+      {payload.user.isManager &amp;&amp; &lt;TeamWelcome user={payload.user} /&gt;}
+      &lt;WhatSHot onNewReleases setPopular… /&gt;   // or tab buttons
+    &lt;/main&gt;
+  );
+}</code></pre>
+
+<h2>Widgets become prop-receivers</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; userWelcome.vue</h4>
+<pre><code>computed: {
+  ...mapGetters("account", ["getCurrentUser"]),
+  ...mapState("account", ["metrics"])
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; UserWelcome.jsx</h4>
+<pre><code>export default function UserWelcome({ user, metrics }) {
+  // props arrived from Home — nothing reaches into a store
+}</code></pre>
+  </div>
+</div>
+<p>Two rules: (1) the widget takes everything it renders as props; (2) the <em>page</em> (not the widget) decides when data is missing — render early-return <code>&lt;p&gt;Loading…&lt;/p&gt;</code> or <code>null</code>.</p>
+
+<h2>Loading-vs-content UI pattern</h2>
+<pre><code>if (isLoading) return &lt;div className="skeleton" /&gt;; // or text
+if (!payload) return null;                           // nothing to show yet</code></pre>
+
+<h2>Why this matters for the mission</h2>
+<p>The Home page is the slice you set out to port. This is where all the earlier lessons converge: a function component (01) that loads on mount (02) and passes data down (03), with tabs as state (01/04). The mock data file is what lets the demo run with no backend &mdash; exactly the &ldquo;Vite app reimplementing Home with mock data&rdquo; goal.</p>
+
+</div>
+</body>
+</html>

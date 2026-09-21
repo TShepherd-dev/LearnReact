@@ -1,39 +1,30 @@
-import { useState } from 'react';
-import TeamGreeting from '../../../components/TeamGreeting.jsx';
-import Pagination from '../../../components/Pagination.js';
-import MembersAddUser from '../../../components/MembersAddUser.jsx';
-import CauseCrash from '../../../components/CauseCrash.jsx';
+import { useState, useEffect } from 'react';
+import { mockHome } from '../../../mock/api.js'
 
-const initialForm = {
-    firstName: '',
-    showCompleted: false,
-};
+import TeamWelcome from '../../../components/Home/TeamWelcome.jsx';
+import UserWelcome from '../../../components/Home/UserGreeting.jsx';
+import WhatsHot from '../../../components/Home/WhatsHot.jsx';
+
 
 export default function Home() {
-  const [count, onPage] = useState(1);
+  const [payload, setPayload] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [userForm, setUserForm] = useState(initialForm);
+  useEffect(() => {
+    mockHome().then((data) => {
+      setPayload(data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  if (isLoading) return <p>Loading…</p>;
 
   return (
-    <div>
-      <h2>Home</h2>
-      
-      <TeamGreeting /><br/>
-      <br/>
-      <p>Count: {count}</p>
-      <Pagination start={count} total={100} pageSize={13} onPage={onPage} /><br/>
-      <br/>
-
-      <MembersAddUser userForm={userForm} setUserForm={setUserForm} />
-      UserName: {userForm.firstName ?? ""}<br/>
-      Show Completed: {userForm.showCompleted ? "Yes" : "No"}<br/>
-
-      <br/>
-
-      <CauseCrash /><br/>
-
-      <br/>
-      <b>End of Home Component</b>
-    </div>
+    <main>
+      <UserWelcome user={payload.user} metrics={payload.metrics} />
+      {payload.user.isManager &&
+        <TeamWelcome user={payload.user} />}
+      <WhatsHot whatsHotModules={payload.whatsHotModules} />
+    </main>
   );
 }

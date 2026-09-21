@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0008 · The Home page with real layout + mock data</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 08</strong> &middot; Data &amp; Layout &middot; <a href="../reference/0008-home-layout-mock-data.html">Reference</a> &middot; <a href="../lessons/0006-state-management.html">Lesson 06</a> &middot; <a href="0009-page-state-and-loading.html">Next</a>
+</div>
+
+<h1>The Home page: real layout + mock data</h1>
+<p>You already know the components (Lesson 01), the effects (02), the props flow (03), and state (06). Now we wire them together into the <em>actual thing you set out to build</em>: the Home page, matching the real layout, running off mock data. By the end of this lesson you'll be able to take any fed-by-the-store Vue page and turn it into a React page that loads its own data and hands it to child components as props.</p>
+
+<h2>The one idea</h2>
+<blockquote>
+In Vue, a page <strong>pulls</strong> from a global store. In React, a page <strong>owns its data</strong>: a <code>useEffect</code> loads it, local state holds it, and the page passes it <em>down</em> to child widgets as props. Mock data is just a function that resolves to the same shape the real API would &mdash; so swapping for the real fetch later is a one-line change.
+</blockquote>
+
+<h2>Read the real file</h2>
+<p>Open <code>src/views/Home.vue</code> in the source app. Notice how much of its script block is <em>declaring data needs</em>, not layout:</p>
+<ul>
+  <li><code>...mapGetters("account", ["getCurrentUser", "isManager"])</code></li>
+  <li><code>...mapState("account", ["metrics", "isMetricsLoading"])</code></li>
+  <li><code>...mapState("catalogue", ["parentTags", "isParentTagLoading"])</code></li>
+  <li><code>...mapActions("account", ["getMetrics"])</code> &mdash; fires the API call.</li>
+</ul>
+<p>Then <code>created()</code> triggers <code>getMetrics</code>, and the template renders a stack of widgets (<code>userWelcome</code>, <code>teamWelcome</code> gated by <code>isManager</code>, sliders, and the &ldquo;what&rsquo;s hot&rdquo; tab buttons flipping <code>popularContentIsActive</code>/<code>newReleasesIsActive</code>).</p>
+
+<h2>Translate it</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; Home.vue (data flow)</h4>
+<pre><code>computed: {
+  ...mapGetters("account", ["getCurrentUser","isManager"]),
+  ...mapState("account", ["metrics","isMetricsLoading"]),
+  ...mapState("catalogue", ["parentTags","isParentTagLoading"])
+},
+methods: {
+  ...mapActions("account", ["getMetrics"])
+},
+created() {
+  this.getMetrics();          // action fires API call
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; Home.jsx (translated)</h4>
+<pre><code>export default function Home() {
+  const [payload, setPayload] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() =&gt; {
+    mockHome().then((data) =&gt; {
+      setPayload(data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  if (isLoading) return &lt;p&gt;Loading…&lt;/p&gt;;
+
+  return (
+    &lt;main&gt;
+      &lt;UserWelcome user={payload.user} metrics={payload.metrics} /&gt;
+      {payload.user.isManager &amp;&amp;
+        &lt;TeamWelcome user={payload.user} /&gt;}
+      &lt;WhatsHot /&gt;
+    &lt;/main&gt;
+  );
+}</code></pre>
+  </div>
+</div>
+
+<p>Spot the pattern:</p>
+<ul>
+  <li><strong>mapState / mapGetters &#8594; props.</strong> The store disappears from the widgets. Home holds the data and hands it down. Widgets become dumb prop-receivers.</li>
+  <li><strong>mapActions + created() &#8594; useEffect.</strong> &ldquo;Load on mount&rdquo; is the same Lesson-02 effect; here it resolves a mock promise instead of calling the store action.</li>
+  <li><strong>isMetricsLoading &#8594; isLoading local state</strong>, and the early-return <code>&lt;p&gt;Loading…&lt;/p&gt;</code> does the v-if work.</li>
+</ul>
+
+<h2>The mock data contract</h2>
+<p>The trick that makes the demo run with no backend: the mock returns <em>exactly</em> the shape the real API returns. The component never knows the difference.</p>
+<pre><code>// mock/api.js
+export const mockHome = () =&gt;
+  new Promise((resolve) =&gt; {
+    setTimeout(() =&gt; {
+      resolve({
+        user: { firstName: "Tim", lastName: "Shepherd", isManager: true },
+        metrics: {
+          TotalModulesTaken: 12,
+          TotalHoursTrained: 26,
+          PlanCategoryProgress: [
+            { PlanCategory: "compliance",   PlanCategoryProgressPercent: 60 },
+            { PlanCategory: "trainingPlan", PlanCategoryProgressPercent: 40 }
+          ]
+        },
+        parentTags: ["Compliance", "Leadership", "Safety"]
+      });
+    }, 400); // pretend network latency
+});</code></pre>
+<div class="tldr">
+The golden rule: <strong>match the real API's shape in the mock.</strong> Then &ldquo;plumb in the backend&rdquo; later means changing the import, not rewriting the page.
+</div>
+
+<h2>Widgets become prop-receivers</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; userWelcome.vue</h4>
+<pre><code>computed: {
+  ...mapGetters("account", ["getCurrentUser"]),
+  ...mapState("account", ["metrics"])
+}</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; UserWelcome.jsx</h4>
+<pre><code>export default function UserWelcome({ user, metrics }) {
+  const fullName = `${user.firstName} ${user.lastName}`;
+  return (
+    &lt;div className="user-welcome"&gt;
+      &lt;h2&gt;Welcome, {fullName}&lt;/h2&gt;
+      &lt;p&gt;You have {metrics.TotalModulesTaken} modules taken.&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+  </div>
+</div>
+
+<p>Two rules:</p>
+<ul>
+  <li><strong>The widget renders only what it's handed.</strong> No <code>useContext</code>, no store import &mdash; props only.</li>
+  <li><strong>The page decides about missing data</strong>, not the widget. Early-return <code>&lt;p&gt;Loading…&lt;/p&gt;</code> before rendering children.</li>
+</ul>
+
+<h2>Why this matters for your mission</h2>
+<p>This is the slice you picked to start with: the Home page and shell, with mock data. Every earlier lesson was scaffolding for this. When an interviewer describes a big legacy page fed by a store, your habit should be to ask &mdash; &ldquo;what data does it need?&rdquo; &mdash; and then write that as a single prop-shaped payload. That&rsquo;s the React muscle.</p>
+
+<h2>Practice — retrieve, don't peek</h2>
+<p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"In React, who loads the data a page needs?","o":["the global store","each widget loads","the page itself","the router does"],"a":2,"why":"The page owns loading via useEffect + local state, then hands data down as props."},
+  {"q":"How do widgets get the data they render?","o":["as props","via a store","global imports","magic globals"],"a":0,"why":"Widgets become prop-receivers; the page distributes the payload."},
+  {"q":"When is it time to bring in the real backend?","o":["never in prod","branch new app","rewrite the page","swap the import"],"a":3,"why":"The mock matches the real API shape, so backend wiring is a one-line import swap."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Open <code>src/views/Home.vue</code> in the source app and list its data needs (getters, state, actions) on paper.</li>
+  <li>In your demo app, create <code>src/mock/api.js</code> with <code>mockHome()</code> returning the same shape (user, metrics, parentTags).</li>
+  <li>Rewrite <code>src/views/frontend/Home/Home.jsx</code>: <code>useEffect</code> loads the mock, local state holds it, children rendered from props, with a <code>Loading…</code> early-return.</li>
+  <li>Convert your existing widget components (TeamGreeting, etc.) into prop-receivers so Home &mdash; not the widget &mdash; owns the data.</li>
+</ol>
+
+<h2>Primary source to read</h2>
+<p>The official docs: <a href="https://react.dev/learn/thinking-in-react">Thinking in React</a> (step 2: build a static version, then add state last) and <a href="https://react.dev/learn/synchronizing-with-effects">Synchronizing with Effects</a> for the fetch-on-mount pattern.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0008-home-layout-mock-data.html">Home page layout + mock data contract</a> cheat sheet compresses this lesson. Next lesson: <a href="0009-page-state-and-loading.html">page-level state and loading states</a> — handling empty, error, and retry states across the demo.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If the &ldquo;widget becomes a prop-receiver&rdquo; flip feels odd after years of mapState, ask me to show you the same component three ways &mdash; store-fed, props-fed, and Context-fed &mdash; so the trade-off is concrete.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
