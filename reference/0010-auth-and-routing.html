@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference: Auth &amp; routing — guards, context, return-referrer</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>ReactJS Reference 10</strong> &middot; Auth &amp; routing &middot; <a href="../lessons/0010-auth-and-routing.html">Lesson 0010</a>
+</div>
+
+<h1>Auth &amp; routing: guards, context, return-referrer</h1>
+<p>Vue guards navigation <em>inside the router</em> (imperative <code>router.beforeEach</code>); React guards navigation by <em>deciding what renders</em> (a component in the route tree). This is the quick-reference for porting the auth gate from <code>src/routers/core.js</code> + <code>src/store/bffAuth.js</code>. Read Lesson 0010 first.</p>
+
+<h2>The mental model</h2>
+<blockquote>
+<code>router.beforeEach</code> runs its check once per navigation, as a side effect. A <code>&lt;RequireAuth&gt;</code> component re-runs its check on every render. So when the user logs in or out, the tree reacts on its own — no second navigation is needed, and there is nowhere a guard, a login page, and a logout page can disagree.
+</blockquote>
+
+<h2>The same decision, two homes</h2>
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; the source app</h4>
+<pre><code>router.beforeEach((to, from, next) =&gt; {
+  const authRequired = to.matched
+    .some(r =&gt; !r.meta.isPublic);
+
+  if (authRequired &amp;&amp;
+      !store.getters['account/getCurrentUser']) {
+    store.dispatch('bffAuth/login'); // full-page OIDC redirect
+    return next(false);              // drop this navigation
+  }
+
+  sessionStorage.setItem(
+    'requestedPath', to.fullPath);   // remember where to return
+  next();
+});</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; the ported app</h4>
+<pre><code>function RequireAuth() {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user) {
+    return &lt;Navigate to="/login"
+      state={{ from: location }}
+      replace /&gt;;
+  }
+  return &lt;Outlet /&gt;;
+}
+
+// route tree (App.jsx)
+&lt;Route element={&lt;RequireAuth /&gt;}&gt;
+  &lt;Route element={&lt;ShellLayout /&gt;}&gt;
+    &lt;Route index element={&lt;Home /&gt;} /&gt;
+    &lt;Route path="my-training"
+      element={&lt;MyTraining /&gt;} /&gt;
+  &lt;/Route&gt;
+&lt;/Route&gt;</code></pre>
+  </div>
+</div>
+
+<h2>Public vs protected = where the route sits</h2>
+<table>
+<tr><th>Route group</th><th>Vue (source app)</th><th>React (ported app)</th></tr>
+<tr><td><strong>Guest-visible</strong> — login, logged-out landing</td><td><code>meta.isPublic: true</code> (<code>/login</code>, <code>/auth-callback</code>, <code>/auth-logout</code>)</td><td>declared <em>outside</em> the <code>&lt;RequireAuth&gt;</code> layout route</td></tr>
+<tr><td><strong>Protected</strong> — the whole app shell</td><td>no <code>meta.isPublic</code> &rarr; the guard calls <code>bffAuth/login</code></td><td>nested under the pathless <code>&lt;Route element={&lt;RequireAuth /&gt;}&gt;</code></td></tr>
+</table>
+
+<h2>Term-by-term map</h2>
+<table>
+<tr><th>Vue 2 (source app)</th><th>React (ported app)</th><th>Notes</th></tr>
+<tr><td><code>router.beforeEach</code> auth gate</td><td><code>&lt;RequireAuth&gt;</code> layout route + <code>&lt;Navigate&gt;</code> / <code>&lt;Outlet&gt;</code></td><td>The guard is a component, not a hook around navigation.</td></tr>
+<tr><td><code>next(false)</code> — cancel the navigation</td><td><code>&lt;Navigate ... replace /&gt;</code></td><td><code>replace</code> swaps the history entry instead of appending.</td></tr>
+<tr><td><code>sessionStorage['requestedPath']</code> + redirect back after code exchange</td><td><code>&lt;Navigate state={{ from: location }}&gt;</code> then <code>navigate(from, { replace: true })</code></td><td>React carries the destination alongside the redirect, not in storage. <code>replace: true</code> means Back skips the login page.</td></tr>
+<tr><td>Vuex <code>bffAuth</code> module (auth state + login/logout actions)</td><td><code>AuthContext</code> + <code>useAuth()</code> hook</td><td>One provider at the root; guard, login and logout all read the same user.</td></tr>
+<tr><td>App boot + <code>SHOW_LOADING</code> splash</td><td><code>isBootstrapping</code> in <code>AuthProvider</code> &rarr; render a splash until the session check resolves</td><td>No flash of protected UI before the "are you logged in?" answer.</td></tr>
+<tr><td><code>meta.isPublic</code> flag</td><td>position in the route tree (inside or outside the auth layout)</td><td>One route tree decides both, mirroring Lesson 0005's menu-from-routes idea.</td></tr>
+<tr><td><code>AuthLogin.vue</code> <code>created()</code> &rarr; <code>dispatch('bffAuth/login')</code></td><td>Login page calls <code>login()</code> from <code>useAuth()</code></td><td>Production <code>login()</code> is a full-page redirect to the identity server; the mock resolves a fake user.</td></tr>
+<tr><td><code>AuthLogout.vue</code></td><td>/auth-logout public page</td><td>Guest-visible "logged out" landing + sign-in-again.</td></tr>
+<tr><td><code>meta.allowedPermissions</code> ladder &rarr; /permission</td><td>(next lesson) a <code>RequirePermission</code> variant on the same pattern</td><td>UI-only — see Rules below.</td></tr>
+</table>
+
+<h2>The mock BFF contract</h2>
+<blockquote>
+The mock impersonates the <strong>real BFF auth endpoints</strong> (<code>/bff/login</code>, <code>/bff/session</code>, <code>/bff/logout</code>) — same resolve shapes, able to reject. Going live is a one-line import swap, exactly like Lessons 0008/0009.
+</blockquote>
+
+<pre><code>// src/mock/auth.js
+export const mockBff = {
+  getSession: () =&gt;
+    Promise.resolve({ isAuthenticated: false, user: null }),
+  login:      () =&gt;
+    Promise.resolve({ id: 5402, name: 'Tim' }),
+  logout:     () =&gt; Promise.resolve(),
+};</code></pre>
+
+<h2>Rules to remember</h2>
+<ul>
+  <li>A guard is a <strong>component</strong>: it returns <code>&lt;Navigate&gt;</code> for guests or <code>&lt;Outlet /&gt;</code> for everyone else.</li>
+  <li>Carry the intended destination in <strong>location state</strong>, not sessionStorage — and use <code>replace</code> on both sides so the Back button never lands on /login.</li>
+  <li>Render a boot/splash until the session check settles. Protected UI must never flash before the auth answer.</li>
+  <li>Auth state lives in <strong>one context</strong> so <code>RequireAuth</code>, Login and Logout are always consistent.</li>
+  <li><strong>Client redirects are UX, not security.</strong> The source app is explicit: its route permissions exist only to control UI route access in the browser — the API/BFF enforces the real boundary. (2026 data-mode React Router does the same steering with <code>throw redirect('/login')</code> in a loader or middleware.)</li>
+</ul>
+
+<p class="side">Session watchdog deferred: lesson 0011 covers the 15s /bff/session poll, cross-tab logout, token refresh, and the /sessionEnded page.</p>
+
+</div>
+</body>
+</html>

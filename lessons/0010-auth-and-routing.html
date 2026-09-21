@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 0010 &middot; Auth &amp; routing: the guard becomes a component</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<div class="body">
+<div class="meta">
+  <strong>LearnReact &middot; Lesson 10</strong> &middot; Auth &amp; Routing &middot; <a href="../reference/0010-auth-and-routing.html">Reference</a> &middot; <a href="../lessons/0009-page-state-and-loading.html">Lesson 09</a>
+</div>
+
+<h1>Auth &amp; routing: the guard becomes a component</h1>
+<p>The app shell and the Home page you've ported so far are the <em>visible</em> app. Today you port the door: the <strong>auth gate</strong>. The source app opens its door with a <code>router.beforeEach</code> hook backed by a Vuex <code>bffAuth</code> store; by the end of this lesson you'll have an equivalent door in React — a <code>&lt;RequireAuth&gt;</code> component backed by a <code>useAuth</code> context — with a mock BFF standing in for the real identity server.</p>
+
+<h2>Recall first (Lesson 0009&rsquo;s punchline)</h2>
+<details>
+  <summary>Why does the Retry button in the Home page call the same <code>load()</code> that the effect calls?</summary>
+  <p class="tldr">One fetch, one place — retry is just running that one fetch again. The effect and the button share <code>load()</code>, so retry is not a new code path, it is the same code path re-invoked.</p>
+</details>
+
+<h2>The one idea</h2>
+<blockquote>
+A Vue router guard intercepts navigation. A React &ldquo;guard&rdquo; is a component that returns <strong>what should render next</strong>: <code>&lt;Navigate&gt;</code> to the login page for guests, or <code>&lt;Outlet /&gt;</code> to let the protected children through. Deciding what renders <em>is</em> rendering. (<a href="https://reactrouter.com/api/data-routers/createBrowserRouter">reactrouter.com &middot; data routers</a>, <a href="https://react.dev/learn/passing-props-to-a-component">react.dev &middot; components</a>)
+</blockquote>
+
+<h2>Read the real file</h2>
+<p>Open <code>src/routers/core.js</code> in the source app and find the auth gate inside <code>router.beforeEach</code>:</p>
+<pre><code>// inside router.beforeEach(to, from, next)
+const authRequired = to.matched.some(r =&gt; !r.meta.isPublic);
+
+if (authRequired &amp;&amp; !store.getters['account/getCurrentUser']) {
+  store.dispatch('bffAuth/login'); // full-page redirect to the identity server
+  return next(false);              // this navigation never happens
+}
+// remember where the user wanted to go, for the return trip
+sessionStorage.setItem('requestedPath', to.fullPath);</code></pre>
+<p>Then open <code>src/store/bffAuth.js</code> and look at <code>login()</code> — the &ldquo;login page&rdquo; is not a page the app builds:</p>
+<pre><code>login() {
+  // PKCE then: present the auth server's login page
+  const params = { client_id,
+    response_type: 'code',
+    scope: 'openid profile email offline_access',
+    redirect_uri: window.location.origin + '/auth-callback',
+    code_challenge, code_challenge_method: 'S256' };
+  window.location.href =
+    authorityUrl + '/connect/authorize?' + new URLSearchParams(params);
+}</code></pre>
+<p>And <code>src/views/AuthLogin.vue</code> is barely a file:</p>
+<pre><code>&lt;template&gt;&lt;div&gt;&lt;/div&gt;&lt;/template&gt;
+&lt;script&gt;
+export default {
+  created() { this.$store.dispatch('bffAuth/login'); }
+};
+&lt;/script&gt;</code></pre>
+<p>Three facts worth naming before we translate:</p>
+<ul>
+  <li><strong>The guard is where the decision lives.</strong> &ldquo;Is there a user?&rdquo; is asked once, imperatively, at every navigation — and the answer is enforced by <em>cancelling</em> the navigation and redirecting the whole page.</li>
+  <li><strong>The return trip is remembered by hand.</strong> The guard stashes the intended URL in <code>sessionStorage['requestedPath']</code> and the auth-callback handler reads it back after login.</li>
+  <li><strong>Login is a full-page redirect.</strong> The Vue app never renders a login form; <code>bffAuth/login()</code> sends the browser to the identity server, which redirects back to <code>/auth-callback</code> with a <code>?code=</code>.</li>
+</ul>
+
+<h2>The shift</h2>
+<p>React Router has no global <code>beforeEach</code>. Instead of a hook that runs <em>around</em> a navigation, you place a component <em>in</em> the route tree that wraps the protected routes. Its render is the guard.</p>
+
+<div class="duo">
+  <div class="panel vue">
+    <h4><span>Vue</span> &middot; the source app</h4>
+<pre><code>// guard in the router
+if (authRequired &amp;&amp; !currentUser) {
+  dispatch('bffAuth/login');
+  return next(false);
+}
+sessionStorage.setItem('requestedPath', to.fullPath);
+
+// Vuex store bffAuth: reactive auth state
+// AuthLogin.vue: created() dispatch('bffAuth/login')</code></pre>
+  </div>
+  <div class="panel react">
+    <h4><span>React</span> &middot; RequireAuth.jsx</h4>
+<pre><code>function RequireAuth() {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user) {
+    return &lt;Navigate to="/login"
+      state={{ from: location }}
+      replace /&gt;;
+  }
+  return &lt;Outlet /&gt;;
+}</code></pre>
+  </div>
+</div>
+
+<p>Three consequences of moving the guard from the router into a component:</p>
+<ul>
+  <li><strong>It reacts to auth changes.</strong> <code>RequireAuth</code> is just a component; it re-renders whenever context changes. When the user logs in, every guarded route becomes reachable without one more navigation. Vue needed the guard to <em>cancel</em> a navigation; React lets the tree render the answer on its own.</li>
+  <li><strong>There is no way for guard and login to disagree.</strong> Both read the same <code>useAuth()</code>.</li>
+  <li><strong>Guests still get a URL, not a dead end.</strong> <code>&lt;Navigate to="/login" replace /&gt;</code> writes a fresh history entry where the <code>next(false)</code> + <code>window.location.href</code> pair would have torn the SPA out of the page.</li>
+</ul>
+
+<h2>Where the auth state lives</h2>
+<p>The Vuex <code>bffAuth</code> module is a store of reactive auth state. React&rsquo;s equivalent is a context provider at the root — the same pattern you met in Lesson 0006, applied to auth instead of the shell.</p>
+
+<pre><code>// src/auth/AuthProvider.jsx
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+
+  useEffect(() =&gt; {
+    // mirrors App.vue's mounted() boot: ask the BFF "is there a session?"
+    mockBff.getSession()
+      .then((s) =&gt; s.isAuthenticated &amp;&amp; setUser(s.user))
+      .catch(() =&gt; {})                 // no session - stay logged out
+      .finally(() =&gt; setIsBootstrapping(false));
+  }, []);
+
+  const login = async () =&gt; setUser(await mockBff.login());
+  const logout = async () =&gt; { await mockBff.logout(); setUser(null); };
+
+  if (isBootstrapping) return &lt;Splash /&gt;;   // no flash of protected UI
+
+  return (
+    &lt;AuthContext.Provider value={{ user, login, logout }}&gt;
+      {children}
+    &lt;/AuthContext.Provider&gt;
+  );
+}</code></pre>
+
+<p>Two details worth naming:</p>
+<ul>
+  <li><strong>The boot gate.</strong> The source app waits for <code>initApp</code> while a splash shows (<code>SHOW_LOADING</code>). Here, <code>AuthProvider</code> holds <code>isBootstrapping</code> and renders <code>&lt;Splash /&gt;</code> until <code>getSession()</code> answers. Until that resolves, we must not render protected routes — a logged-out user would see a flash of the shell before the redirect.</li>
+  <li><strong>The mock is the BFF.</strong> The real endpoints are <code>/bff/getSession</code>-style calls; in a real deployment <code>login()</code> would set <code>window.location.href</code> to the identity server, exactly like the Vue code. The demo resolves a fake user instead. Mirrors the golden rule from Lessons 0008/0009: the mock returns the real shape, so going live later is a one-line import swap.</li>
+</ul>
+
+<h2>Wiring the tree</h2>
+<p>In <code>App.jsx</code>, public routes sit outside the guard; everything under the shell sits inside it:</p>
+
+<pre><code>// App.jsx
+&lt;ShellCtxProvider&gt;
+  &lt;BrowserRouter&gt;
+    &lt;Routes&gt;
+      &lt;Route path="/login" element={&lt;Login /&gt;} /&gt;
+      &lt;Route path="/auth-logout" element={&lt;LoggedOut /&gt;} /&gt;
+
+      &lt;Route element={&lt;RequireAuth /&gt;}&gt;
+        &lt;Route element={&lt;ShellLayout /&gt;}&gt;
+          &lt;Route index element={&lt;Home /&gt;} /&gt;
+          &lt;Route path="my-training" element={&lt;MyTraining /&gt;} /&gt;
+          {/* ... the rest of the protected app ... */}
+        &lt;/Route&gt;
+      &lt;/Route&gt;
+    &lt;/Routes&gt;
+  &lt;/BrowserRouter&gt;
+&lt;/ShellCtxProvider&gt;</code></pre>
+
+<p><code>meta.isPublic</code> from the Vue route table maps to <em>position in the tree</em>: routes for guests are siblings of the guard, routes for users are its children. One route tree still drives everything — same idea as Lesson 0005&rsquo;s menu-from-routes.</p>
+
+<h2>The return trip</h2>
+<p>The source guard saved the destination in <code>sessionStorage['requestedPath']</code>; the auth-callback handler read it back and redirected. React carries it <em>beside</em> the redirect, as location state:</p>
+
+<pre><code>// Login.jsx
+const { user, login } = useAuth();
+const location = useLocation();
+const navigate = useNavigate();
+
+const from = location.state?.from?.pathname ?? '/';
+
+useEffect(() =&gt; { if (user) navigate(from, { replace: true }); }, [user]);
+
+return &lt;button onClick={login}&gt;Sign in&lt;/button&gt;;</code></pre>
+
+<p>Why <code>replace: true</code>? The <code>/login</code> entry was pushed by the guard&rsquo;s redirect; we swap it for the originally intended page so the Back button goes to the page <em>before</em> login, not back to the form. Exactly what the official React Router auth example does (<a href="https://github.com/remix-run/react-router/tree/main/examples/auth">examples/auth</a>).</p>
+
+<h2>The permission ladder (a forward pointer)</h2>
+<p>The source guard does more than "is there a user?" — routes carry <code>meta.allowedPermissions</code> and the guard checks them against the user&rsquo;s groups, redirecting to a <code>/permission</code> page. That maps onto the same pattern: a sibling component like <code>&lt;RequirePermission allowed="user.mustBeAManager"&gt;</code> that either renders <code>&lt;Outlet /&gt;</code> or <code>&lt;Navigate to="/permission" replace /&gt;</code>. Worth holding for a lesson of its own; the shape you&rsquo;re learning today is the shape it will use.</p>
+
+<p>And a warning straight from the source app&rsquo;s own comment on those permissions: they exist <strong>only to control UI route access within the browser</strong> — the API does its own, real checks. The React guard is the same: it steers people, it does not protect data.</p>
+
+<h2>Rules to remember</h2>
+<ul>
+  <li>A guard is a <strong>component</strong>, not a hook around navigation: <code>&lt;Navigate&gt;</code> or <code>&lt;Outlet /&gt;</code>.</li>
+  <li><strong>Public = outside</strong> the auth layout route; <strong>protected = inside</strong> it.</li>
+  <li>Carry the return destination in <strong>location state</strong>, not sessionStorage — and <code>replace</code> on both sides so Back skips /login.</li>
+  <li>Hold <strong>one auth state</strong> in context so the guard, the login page and the logout page can never disagree.</li>
+  <li>Render a <strong>boot/splash</strong> until the session check answers — protected UI must never flash.</li>
+  <li>Client redirects are <strong>UX, not security</strong>; the identity server and the BFF enforce the real boundary.</li>
+</ul>
+
+<h2>Practice — retrieve, don&rsquo;t peek</h2>
+<p>Cover the React panels above, then answer. Immediate feedback; one line each.</p>
+<div class="quiz" data-quiz='[
+  {"q":"In Vue, the guard answers \u0027is there a user?\u0027 once per navigation. In React, that same guard lives where?","o":["in a router option that intercepts every navigation","in a component - RequireAuth - that renders Navigate or Outlet depending on auth state","in a store mutation that blocks an unauthorized dispatch","in a second copy of the route table for guests"],"a":1,"why":"Deciding what renders is rendering - RequireAuth sits in the route tree and returns Navigate to /login for guests or Outlet for protected children."},
+  {"q":"The Vue guard saves the intended destination in sessionStorage.requestedPath. In the React port, where does that destination travel?","o":["location.state, carried by Navigate and read back with navigate(from, { replace: true })","a query string parameter on the login URL","a cookie the router writes automatically","the router just re-runs the last failed navigation"],"a":0,"why":"Navigate attaches the destination to the redirect; replace:true swaps the /login history entry so the Back button skips the login form."},
+  {"q":"RequireAuth redirects unauthenticated users to /login. Why is that redirect NOT the real security boundary?","o":["because Navigate only works inside a BrowserRouter","because a client-side redirect just steers the UI - the identity server and the BFF are the enforcement","because RequireAuth cannot read the session cookie","because Outlet renders child routes too early"],"a":1,"why":"The source app is explicit: its route permissions only control UI route access in the browser - the API does its own checks. Client redirects are UX; the data layer is the security."}
+]'></div>
+
+<h2>Do it in the real workspace</h2>
+<ol>
+  <li>Create <code>src/mock/auth.js</code> with <code>mockBff</code>: <code>getSession</code> (resolves <code>{ isAuthenticated: false, user: null }</code>), <code>login</code> (resolves a fake user after ~900ms), <code>logout</code>. Give login an <code>opts.fail</code> branch that rejects — Lesson 0009&rsquo;s rule, the mock must be able to fail.</li>
+  <li>Create <code>src/auth/AuthProvider.jsx</code>: the context, the <code>useAuth()</code> hook, and the provider shown above — boot gate, <code>login</code>, <code>logout</code>.</li>
+  <li>Create <code>src/auth/RequireAuth.jsx</code>: exactly the component from <em>The shift</em>.</li>
+  <li>Create <code>src/views/auth/Login.jsx</code> and <code>src/views/auth/LoggedOut.jsx</code> — the logged-out page keeps a "Sign in again" button that clears any stale state and calls <code>login()</code>, mirroring <code>AuthLogout.vue</code>.</li>
+  <li>Update <code>App.jsx</code> to the tree in <em>Wiring the tree</em>, and wrap <code>&lt;App /&gt;</code> with <code>&lt;AuthProvider&gt;</code> in <code>main.jsx</code>.</li>
+  <li>Run <code>npm run dev</code> and prove every leg of the trip: logged-out visit to <code>/my-training</code> lands on <code>/login</code>; sign in drops you back on <code>/my-training</code>; the Back button does <em>not</em> return to <code>/login</code>; signing out lands on <code>/auth-logout</code>; and reloading a protected URL while logged in never flashes the shell.</li>
+</ol>
+<p>Struggling? Each React panel above is the finished shape for that file — the point is that you could rebuild each one from the <em>Rules to remember</em>, not that you memorise the lines.</p>
+
+<h2>Primary source to read</h2>
+<p><a href="https://github.com/remix-run/react-router/tree/main/examples/auth">React Router&rsquo;s official auth example</a> — the <code>RequireAuth</code> component and the <code>state={{ from: location }}</code> round-trip this lesson is based on, in ~80 lines. Then, once, the <a href="https://reactrouter.com/api/data-routers/createBrowserRouter">data-router docs</a> so you can see where the same guard moves to in React Router v8&rsquo;s data mode (<code>loader</code> / <code>middleware</code> with <code>throw redirect('/login')</code>) — same decision, data-tier home.</p>
+
+<h2>Reference &amp; next step</h2>
+<p>The one-page <a href="../reference/0010-auth-and-routing.html">auth &amp; routing</a> cheat sheet compresses this lesson — bookmark it next to Reference 09. The next lesson keeps the door open and watches it: the <strong>session watchdog</strong> — the 15-second <code>/bff/session</code> poll, cross-tab logout, the token-refresh timer, and the revoked-session page — so a user&rsquo;s dead session is caught before the next navigation.</p>
+
+<div class="ask">
+  <strong>Ask your teacher anything.</strong> If the gap between this guard and the real production stack is fuzzy, ask me to walk the OIDC code-exchange round-trip (why the demo&rsquo;s <code>login()</code> resolves a fake user while production sets <code>window.location.href</code> to the identity server), or to sketch the <code>RequirePermission</code> sibling that replaces the Vue <code>allowedPermissions</code> ladder.
+</div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
