@@ -45,7 +45,98 @@ const state = [a1, a2, a3].reduce(shellReducer, initialState);
 <div class="tldr">
 A reducer &ldquo;reduces&rdquo; a whole history of actions into a single current state — same word as &ldquo;fold&rdquo;. In C# terms: an <code>Aggregate</code> over events, or a state-machine transition function: <code>next = current.Transition(command)</code>.
 </div>
-<p>Two properties matter: a reducer is <strong>pure</strong> (same inputs &#8594; same output, no side effects, no API calls — that's what makes it unit-testable in isolation) and it <strong>returns a new state object</strong> instead of mutating (React needs a fresh reference to know something changed and re-render). Compare Vuex: a Vuex mutation mutates <code>state</code> in place inside a magic global; a React reducer returns a new object from a plain function.</p>
+<p>That's just the name — don't lose sleep over the word &ldquo;reduce.&rdquo; The <em>shape</em> is what matters: <code>(currentState, message) =&gt; newState</code>. And you've written it before. Let's prove it with one easy, real-world scenario in both languages: a <strong>shopping cart</strong>. A cart is just a list of SKUs, and the commands that change it are <em>add</em>, <em>remove</em>, and <em>clear</em>.</p>
+
+<h3>The same reducer in C# — you already know this one</h3>
+<p>This is event sourcing in miniature. If you've ever applied an event to an aggregate, this is the identical signature — <code>Apply(currentState, event) =&gt; newState</code>:</p>
+<pre><code>record CartAction(string Type, string Sku);
+record CartState(List&lt;string&gt; Items)
+{
+    public static CartState Empty = new([]);
+}
+
+// (currentState, action) =&gt; newState  — the reducer signature:
+CartState Apply(CartState state, CartAction action) =&gt; action switch
+{
+    { Type: "add",    Sku: var s } =&gt; state with { Items = [..state.Items, s] },
+    { Type: "remove", Sku: var s } =&gt; state with { Items = state.Items.Where(i =&gt; i != s).ToList() },
+    { Type: "clear" }               =&gt; state with { Items = [] },
+    _ =&gt; throw new InvalidOperationException($"Unknown action type: {action.Type}"),
+};
+
+// "Reducing" = folding every command ever sent into one current state:
+var cart = actions.Aggregate(CartState.Empty, Apply); // actions: IEnumerable&lt;CartAction&gt;
+</code></pre>
+<p>Read it like a state machine: each case (<code>add</code>/<code>remove</code>/<code>clear</code>) states exactly how it changes the state, returns a <em>new</em> immutable record via <code>with</code>, and the default arm throws — an unknown action fails loudly, never silently ignored.</p>
+
+<h3>The same cart in plain JavaScript (React)</h3>
+<pre><code>// The SAME pattern — (state, action) =&gt; newState:
+function cartReducer(state, action) {
+  switch (action.type) {
+    case 'add':
+      return { ...state, items: [...state.items, action.sku] };            // new array, never mutate
+    case 'remove':
+      return { ...state, items: state.items.filter(s =&gt; s !== action.sku) };
+    case 'clear':
+      return { ...state, items: [] };
+    default:
+      throw new Error('Unknown action: ' + action.type);                   // loud, just like the C# default
+  }
+}
+
+// Hooked into a component by useReducer instead of several useState calls:
+const [cart, dispatchCart] = useReducer(cartReducer, { items: [] });
+// dispatchCart({ type: 'add', sku: 'TSHIRT-01' });  // one intent rewrites all of state
+</code></pre>
+<p>Same state machine, same purity, same loud default. The only real differences are vocabulary (<code>case</code> vs C# switch arm) and that <em>React</em> replays the reducer for you — every <code>dispatchCart</code> call runs your function with the previous state and the action, and stores whatever it returns. That is literally all <code>useReducer</code> does.</p>
+<p>Two properties make the pattern work in both languages: a reducer is <strong>pure</strong> (same inputs &#8594; same output, no side effects, no API calls — that's what makes it unit-testable in isolation) and it <strong>returns a new state object</strong> instead of mutating. React needs that fresh reference to know something changed and re-render — the same reason you write immutable <code>with</code> expressions in C# rather than mutating in place. Compare Vuex: a Vuex mutation mutates <code>state</code> in place inside a magic global; a React reducer returns a new object from a plain function.</p>
+
+<h3>Where would you actually reach for a reducer? (the real-world test)</h3>
+<p><strong>In C#:</strong> when several commands transition one piece of state through defined stages — an order workflow (Placed &#8594; Paid &#8594; Shipped), a leave/claim request status, or an event-sourced aggregate rebuilt from its event stream. You're already doing this; <em>reducer is just the frontend's word for it</em>.</p>
+<p><strong>In React:</strong> when <em>one user intent rewrites several related values as a single unit</em>. The source app example is in this very lesson — the shell's <code>toggleSearch</code> action commits <em>two</em> mutations: it flips <code>isSearchOpen</code> <em>and</em> collapses the mobile menu in one move.</p>
+<pre><code>// actions.toggleSearch in the shell store:
+toggleSearch({ commit }, open) {
+  commit('toggleSearch', open);          // set isSearchOpen
+  commit('toggleMobileMenu', false);     // and collapse the mobile menu
+}
+// In React that one intent is one reducer case, which is exactly what makes
+// the two fields change together structurally:
+case 'toggleSearch':
+  return { ...state, isSearchOpen: action.open, isMobileMenuOpen: false };
+</code></pre>
+<p>If that intent had been three separate <code>useState</code> setters, nothing would force them to change together — one could flip while the other forgot. A reducer makes &ldquo;these fields update as a unit&rdquo; structural. Rule of thumb from the docs: reach for <code>useReducer</code> when a component has multiple related sub-values or the next state depends on the previous one; keep a single independent value on plain <code>useState</code>. (<a href="https://react.dev/learn/extracting-state-logic-into-a-reducer">react.dev &middot; Extracting State Logic into a Reducer</a>)</p>
+<p>Because a reducer is pure, you unit-test it like any C# method — no browser, no DOM, no network:</p>
+<pre><code>expect(cartReducer({ items: [] }, { type: 'add', sku: 'TSHIRT-01' }).items)
+  .toEqual(['TSHIRT-01']);
+// That cheap testability is exactly why the pattern survives in both languages.
+</code></pre>
+
+<h3>Worked example &mdash; a status workflow turned into a reducer</h3>
+<p>The source app has a challenge status that moves through <code>upcoming</code> &#8594; <code>live</code> &#8594; <code>ended</code>, driven by a background job. The current code decides which records to touch in SQL, then writes the new status straight to the repository:</p>
+<pre><code>// today (blunt): decide in SQL, then write without any state rules
+var toMove = GetChallengesToMove(now, targetStatus: live);
+toMove.ForEach(c =&gt; challengeRepo.SetChallengeStatus(c.Id, live));</code></pre>
+<p>Fine for a happy path &mdash; but nothing in the code <em>knows</em> that <code>live</code> may only follow <code>upcoming</code>, or that <code>ended</code> is terminal. A buggy job could skip states or re-open a finished challenge. The reducer version makes those rules explicit and impossible to fall through:</p>
+<pre><code>public enum ChallengeTrigger { StartDateReached, EndDateReached }
+
+// (state, action) =&gt; newState — the reducer signature, applied to a status:
+public static class ChallengeStatusTransitions
+{
+    public static ChallengeStatus Apply(ChallengeStatus current, ChallengeTrigger trigger) =&gt;
+        (current, trigger) switch
+        {
+            (ChallengeStatus.upcoming, ChallengeTrigger.StartDateReached) =&gt; ChallengeStatus.live,
+            (ChallengeStatus.live,     ChallengeTrigger.EndDateReached)   =&gt; ChallengeStatus.ended,
+            _ =&gt; throw new InvalidOperationException($"Illegal: {current} on {trigger}"),
+        };
+}</code></pre>
+<p>The job then becomes <em>decide &#8594; fold &#8594; persist</em>, and every invalid move throws loudly instead of silently corrupting data:</p>
+<pre><code>var next = ChallengeStatusTransitions.Apply(challenge.Status, trigger); // throws if illegal
+challengeRepo.SetChallengeStatus(challenge.Id, next);                    // only valid moves persist</code></pre>
+<p>And those same rules are now unit-testable without a database:</p>
+<pre><code>[Test] void UpcomingToLive_Allows()  =&gt; Apply(upcoming, StartDateReached).Should().Be(live);
+[Test] void EndedCannotReopen_Throws() =&gt; Apply(ended, StartDateReached).Should().Throw&lt;InvalidOperationException&gt;();</code></pre>
+<p>This is exactly the &ldquo;event sourcing / state machine&rdquo; C# spot from the rule of thumb above. <strong>But here's the honest takeaway:</strong> the source app does <em>not</em> actually need this today &mdash; its status is simple, one-directional, and driven by a cron job, so the blunt write is fine. A reducer earns its keep when transitions get branching, illegal moves matter, or you need to replay history. Matching a pattern to the problem, rather than bolting it on, is what senior engineers get paid for.</p>
 
 <h3>"Slice" is Redux-Toolkit jargon for a namespaced Vuex module</h3>
 <p>&ldquo;Slice&rdquo; comes from Redux Toolkit (the 2026 enterprise store). Picture the whole state tree cut into &ldquo;slices&rdquo; — each one a self-contained section that owns its own state, its own transition functions (reducers), and its own action types. That is <em>exactly</em> your <code>namespaced: true</code> Vuex module:</p>

@@ -43,7 +43,7 @@ npm i -D typescript          # @types/react &amp; @types/react-dom already prese
   "include": ["src"]
 }
 </code></pre>
-<div class="side">Key invariant: with <code>allowJs: true</code> + <code>checkJs: false</code>, you can rename <code>.jsx</code> &#8594; <code>.tsx</code> and add types <strong>one file at a time</strong>. The app keeps running while you migrate.</div>
+<div class="side">Key invariant: with <code>allowJs: true</code> + <code>checkJs: false</code>, you can rename <code>.jsx</code> &#8594; <code>.tsx</code> and add types <strong>one file at a time</strong>. The app keeps running while you migrate. <strong>Caveat:</strong> <code>allowJs</code> only lets <code>tsc</code> <em>read</em> <code>.jsx</code> files so imports resolve — it does not type-check them. A typed <code>.tsx</code> component only enforces its props at <em>checked</em> call sites, so rename each caller to <code>.tsx</code> (or set <code>checkJs: true</code> to check all JS) to see the errors.</div>
 
 <h2>Typing a component's props</h2>
 <div class="duo">

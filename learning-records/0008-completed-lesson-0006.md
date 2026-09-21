@@ -16,3 +16,13 @@ Next: the planned Lesson 0007 (TypeScript JSX→TSX migration, fluid timing) tur
 
 ## Status
 Lesson 0006 delivered, quiz complete 3/3, learning recorded. No remediation. Six lessons, six perfect scores.
+
+## Follow-up: reducer concept deepened (spaced retrieval, post-lesson)
+Tim came back to the reducer idea after the lesson — asked what a "reducer type C# scenario" looks like in his own .NET codebase, then for a deeper reducer explanation (C# + JS), then a real-world "where would I use one" scenario. He verified it against his own code: searched `Core\6.X\DLLS\AP-CoreDlls-6.5.X` and confirmed **no reducer-style patterns exist there currently** (no `(state, action) => newState`, no Apply-aggregates, no state machines — only an unrelated Swagger `Apply`, a trivial Aggregate string-join, and mutable status enums written imperatively via repo/DAL).
+
+To ground the concept in his real domain, Lesson 0006 was expanded with:
+- A C# shopping-cart reducer (`CartState`/`CartAction`, `action switch`, immutable `with`) + the identical JS `cartReducer`/`useReducer`.
+- A "Where would you actually reach for a reducer?" rule of thumb.
+- A **worked example using his real challenge-status workflow** (`upcoming → live → ended`, driven by `ChallengesWorkflowJob`): current blunt SQL+repo-write vs a `ChallengeStatusTransitions.Apply(current, trigger)` reducer — with the honest note that his codebase genuinely doesn't *need* a reducer today (simple one-directional cron-driven status), matching pattern to problem.
+
+His closing comprehension statement (verbatim): "I give it the current state and what is triggering the state to be changed, and the reducer function works out what the new state is to return." He confirmed the purity/side-effect split: reducer *determines*, other code persists (in C# the caller writes to repo; in React dispatch stores returned state → re-render). Strong storage-strength evidence the reducer mental-model has landed, not just fluency.

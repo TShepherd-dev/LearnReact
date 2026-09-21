@@ -11,7 +11,8 @@
     "skipLibCheck": true,          // skip checking .d.ts inside node_modules
     "types": ["vite/client"],      // Vite env types (import.meta.env)
     "isolatedModules": true,       // per-file transpile safety (Vite requirement)
-    "verbatimModuleSyntax": true   // type-only imports must use "import type"
+    "verbatimModuleSyntax": true,  // type-only imports must use "import type"
+    //"checkJs": true                // enable type checking for JavaScript files
   },
   "include": ["src"]
 }

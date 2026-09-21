@@ -1,4 +1,22 @@
-const appRoutes = [
+export type MenuLocation = "topmenu" | "sidemenu";
+
+export type AppRoute = {
+  path: string;
+  name: string;
+  componentPath: string;
+  meta: {
+    menuOptions: {
+      display: boolean;
+      displayLocation: MenuLocation;
+      displayOrder: number;
+      menuIcon: string;
+      showSideMenu: boolean;
+    };
+    tkeys: { menuitem: string };
+  };
+};
+
+const appRoutes: AppRoute[] = [
   {
     path: "/",
     name: "home",

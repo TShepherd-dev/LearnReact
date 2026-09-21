@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import TeamGreeting from '../../../components/TeamGreeting.jsx';
-import Pagination from '../../../components/Pagination.jsx';
+import Pagination from '../../../components/Pagination.js';
 import MembersAddUser from '../../../components/MembersAddUser.jsx';
 import CauseCrash from '../../../components/CauseCrash.jsx';
 

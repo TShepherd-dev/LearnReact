@@ -1,4 +1,11 @@
-export default function Pagination({ start, total, pageSize, onPage }) {
+type PaginationProps = {
+    start: number;
+    total: number;
+    pageSize: number;
+    onPage: (page: number) => void;
+};
+
+export default function Pagination({ start, total, pageSize, onPage }: PaginationProps) {
     const currentPage = start;
     const totalPages = Math.ceil(total / pageSize);
     const next = () => {
