@@ -1,10 +1,23 @@
+import type { ComponentType } from 'react';
+
+import Login from '../views/frontend/Auth/Login.jsx';
+import LoggedOut from '../views/frontend/Auth/LoggedOut.jsx';
+import Home from '../views/frontend/Home/Home.jsx';
+import MyTraining from '../views/frontend/MyTraining/MyTraining.jsx';
+import Admin from '../views/admin/Admin/Admin.jsx';
+import AdminDashboard from '../views/admin/Dashboard/Dashboard.jsx';
+
 export type MenuLocation = "topmenu" | "sidemenu";
+
+export type AuthVisibility = 'always' | 'authenticated' | 'anonymous';
 
 export type AppRoute = {
   path: string;
   name: string;
-  componentPath: string;
+  component: ComponentType;
   meta: {
+    requiresAuth: boolean;
+    authVisibility: AuthVisibility;
     menuOptions: {
       display: boolean;
       displayLocation: MenuLocation;
@@ -18,10 +31,46 @@ export type AppRoute = {
 
 const appRoutes: AppRoute[] = [
   {
+    path: "/login",
+    name: "login",
+    component: Login,
+    meta: {
+      requiresAuth: false,
+      authVisibility: 'anonymous',
+      menuOptions: {
+        display: true,
+        displayLocation: "topmenu",
+        displayOrder: 1,
+        menuIcon: "fal fa-home fa-fw",
+        showSideMenu: false
+      },
+      tkeys: { menuitem: "app.pageTitle.home" }
+    }
+  },
+  {
+    path: "/auth-logout",
+    name: "auth-logout",
+    component: LoggedOut,
+    meta: {
+      requiresAuth: false,
+      authVisibility: 'authenticated',
+      menuOptions: {
+        display: true,
+        displayLocation: "topmenu",
+        displayOrder: 99,
+        menuIcon: "fal fa-home fa-fw",
+        showSideMenu: false
+      },
+      tkeys: { menuitem: "app.pageTitle.home" }
+    }
+  },
+  {
     path: "/",
     name: "home",
-    componentPath: "../views/frontend/Home/Home.jsx",
+    component: Home,
     meta: {
+      requiresAuth: true,
+      authVisibility: 'authenticated',
       menuOptions: {
         display: true,
         displayLocation: "topmenu",
@@ -35,8 +84,10 @@ const appRoutes: AppRoute[] = [
   {
     path: "/my-training",
     name: "myTraining",
-    componentPath: "../views/frontend/MyTraining/MyTraining.jsx",
+    component: MyTraining,
     meta: {
+      requiresAuth: true,
+      authVisibility: 'authenticated',
       menuOptions: {
         display: true,
         displayLocation: "topmenu",
@@ -50,8 +101,10 @@ const appRoutes: AppRoute[] = [
   {
     path: "/admin",
     name: "admin",
-    componentPath: "../views/admin/Admin/Admin.jsx",
+    component: Admin,
     meta: {
+      requiresAuth: true,
+      authVisibility: 'authenticated',
       menuOptions: {
         display: true,
         displayLocation: "topmenu",
@@ -66,8 +119,10 @@ const appRoutes: AppRoute[] = [
   {
     path: "/admin/dashboard",
     name: "admin-dashboard",
-    componentPath: "../views/admin/Dashboard/Dashboard.jsx",
+    component: AdminDashboard,
     meta: {
+        requiresAuth: true,
+        authVisibility: 'authenticated',
         menuOptions : {
         display: true,
         displayLocation: "sidemenu",

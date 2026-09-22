@@ -62,7 +62,7 @@ export default {
   <li><strong>Login is a full-page redirect.</strong> The Vue app never renders a login form; <code>bffAuth/login()</code> sends the browser to the identity server, which redirects back to <code>/auth-callback</code> with a <code>?code=</code>.</li>
 </ul>
 
-<h2>The shift</h2>
+<h2 id="the-shift">The shift</h2>
 <p>React Router has no global <code>beforeEach</code>. Instead of a hook that runs <em>around</em> a navigation, you place a component <em>in</em> the route tree that wraps the protected routes. Its render is the guard.</p>
 
 <div class="duo">
@@ -201,7 +201,7 @@ return &lt;button onClick={login}&gt;Sign in&lt;/button&gt;;</code></pre>
 <ol>
   <li>Create <code>src/mock/auth.js</code> with <code>mockBff</code>: <code>getSession</code> (resolves <code>{ isAuthenticated: false, user: null }</code>), <code>login</code> (resolves a fake user after ~900ms), <code>logout</code>. Give login an <code>opts.fail</code> branch that rejects — Lesson 0009&rsquo;s rule, the mock must be able to fail.</li>
   <li>Create <code>src/auth/AuthProvider.jsx</code>: the context, the <code>useAuth()</code> hook, and the provider shown above — boot gate, <code>login</code>, <code>logout</code>.</li>
-  <li>Create <code>src/auth/RequireAuth.jsx</code>: exactly the component from <em>The shift</em>.</li>
+  <li>Create <code>src/auth/RequireAuth.jsx</code>: exactly the component shown in <a href="#the-shift">The shift</a> section above.</li>
   <li>Create <code>src/views/auth/Login.jsx</code> and <code>src/views/auth/LoggedOut.jsx</code> — the logged-out page keeps a "Sign in again" button that clears any stale state and calls <code>login()</code>, mirroring <code>AuthLogout.vue</code>.</li>
   <li>Update <code>App.jsx</code> to the tree in <em>Wiring the tree</em>, and wrap <code>&lt;App /&gt;</code> with <code>&lt;AuthProvider&gt;</code> in <code>main.jsx</code>.</li>
   <li>Run <code>npm run dev</code> and prove every leg of the trip: logged-out visit to <code>/my-training</code> lands on <code>/login</code>; sign in drops you back on <code>/my-training</code>; the Back button does <em>not</em> return to <code>/login</code>; signing out lands on <code>/auth-logout</code>; and reloading a protected URL while logged in never flashes the shell.</li>
